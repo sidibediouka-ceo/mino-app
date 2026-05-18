@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Politique de confidentialité — Mino</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #F5F2ED;
+      color: #1E2A22;
+      line-height: 1.7;
+      padding: 0 16px;
+    }
+
+    .wrapper {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 64px 0 96px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 48px;
+    }
+    .logo {
+      width: 48px;
+      height: 48px;
+      background: #1E3A34;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    .header-text h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1E3A34;
+      letter-spacing: -0.3px;
+    }
+    .header-text p {
+      font-size: 13px;
+      color: #6B7C73;
+      margin-top: 2px;
+    }
+
+    /* Intro card */
+    .intro-card {
+      background: #1E3A34;
+      color: #fff;
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin-bottom: 40px;
+    }
+    .intro-card h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+    .intro-card p {
+      font-size: 14px;
+      line-height: 1.65;
+      opacity: 0.85;
+    }
+
+    /* Sections */
+    .section {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    .section h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1E3A34;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section h3 .icon {
+      font-size: 18px;
+      line-height: 1;
+    }
+    .section p {
+      font-size: 14px;
+      color: #3D4D44;
+      margin-bottom: 10px;
+    }
+    .section p:last-child { margin-bottom: 0; }
+    .section ul {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 10px;
+    }
+    .section ul li {
+      font-size: 14px;
+      color: #3D4D44;
+      padding: 5px 0 5px 20px;
+      position: relative;
+    }
+    .section ul li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: #A7B69A;
+      font-size: 12px;
+      top: 6px;
+    }
+
+    /* Highlight box */
+    .highlight {
+      background: #A7B69A1A;
+      border-left: 3px solid #A7B69A;
+      border-radius: 0 10px 10px 0;
+      padding: 12px 16px;
+      margin: 12px 0;
+      font-size: 14px;
+      color: #1E3A34;
+      font-weight: 500;
+    }
+
+    /* Contact */
+    .contact-card {
+      background: #A7B69A1A;
+      border: 1px solid #A7B69A55;
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .contact-card h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1E3A34;
+      margin-bottom: 8px;
+    }
+    .contact-card p {
+      font-size: 14px;
+      color: #3D4D44;
+      margin-bottom: 12px;
+    }
+    .contact-card a {
+      display: inline-block;
+      background: #1E3A34;
+      color: #fff;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 24px;
+      border-radius: 50px;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: #9EAD96;
+      margin-top: 48px;
+    }
+
+    @media (max-width: 480px) {
+      .wrapper { padding: 40px 0 72px; }
+      .section, .intro-card, .contact-card { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">🌿</div>
+      <div class="header-text">
+        <h1>Politique de confidentialité</h1>
+        <p>Application Mino · Dernière mise à jour : mai 2026</p>
+      </div>
+    </div>
+
+    <!-- Intro -->
+    <div class="intro-card">
+      <h2>Votre vie privée, notre priorité.</h2>
+      <p>
+        Mino est conçu avec un principe simple : <strong>vos données restent sur votre appareil</strong>.
+        Les données saisies dans Mino restent stockées localement sur votre appareil,
+        sans être envoyées à des serveurs tiers ni utilisées à des fins publicitaires.
+      </p>
+    </div>
+
+    <!-- 1. Responsable -->
+    <div class="section">
+      <h3><span class="icon">👤</span> Responsable du traitement</h3>
+      <p>L'application Mino est développée et maintenue par :</p>
+      <ul>
+        <li><strong>Sidibe Diouka</strong></li>
+        <li>Contact : <a href="mailto:contact.mino.support@gmail.com">contact.mino.support@gmail.com</a></li>
+      </ul>
+    </div>
+
+    <!-- 2. Données collectées -->
+    <div class="section">
+      <h3><span class="icon">📦</span> Données saisies dans l'application</h3>
+      <p>Pour fonctionner, Mino vous invite à renseigner les informations suivantes :</p>
+      <ul>
+        <li>Prénom et date de naissance de votre enfant</li>
+        <li>Taille vestimentaire et mesures de croissance</li>
+        <li>Photos et caractéristiques des vêtements (type, taille, couleur, saison)</li>
+        <li>Statut des vêtements (portable, trop petit, à donner, vendu…)</li>
+      </ul>
+      <div class="highlight">
+        Ces données sont exclusivement stockées en local sur votre appareil via la technologie SwiftData d'Apple. Elles ne transitent jamais par un serveur externe.
+      </div>
+    </div>
+
+    <!-- 3. Absence de collecte externe -->
+    <div class="section">
+      <h3><span class="icon">🚫</span> Ce que Mino ne fait pas</h3>
+      <p>Mino ne collecte, ne transmet et ne vend aucune donnée personnelle. En particulier :</p>
+      <ul>
+        <li>Aucun compte utilisateur ni inscription requise</li>
+        <li>Aucun serveur distant ni base de données en ligne</li>
+        <li>Aucun outil d'analyse ou de tracking (Analytics, Firebase, etc.)</li>
+        <li>Aucune publicité ni partage de données avec des tiers</li>
+        <li>Aucun accès à votre localisation, microphone ou contacts</li>
+      </ul>
+    </div>
+
+    <!-- 4. Photos -->
+    <div class="section">
+      <h3><span class="icon">📷</span> Photos et accès à la galerie</h3>
+      <p>
+        Mino peut accéder à votre appareil photo et à votre galerie uniquement lorsque
+        vous choisissez de prendre ou d'importer une photo d'un vêtement.
+      </p>
+      <p>
+        Ces photos sont stockées localement dans l'application et ne sont jamais
+        téléchargées, analysées à distance ou partagées.
+      </p>
+    </div>
+
+    <!-- 5. WeatherKit -->
+    <div class="section">
+      <h3><span class="icon">🌤️</span> Météo (Apple WeatherKit)</h3>
+      <p>
+        Mino utilise le service <strong>WeatherKit d'Apple</strong> pour afficher
+        les conditions météorologiques de la semaine et adapter ses suggestions vestimentaires.
+      </p>
+      <ul>
+        <li>Cette fonctionnalité nécessite un accès ponctuel à votre localisation approximative</li>
+        <li>Les données météo sont fournies par Apple et soumises à la
+          <a href="https://www.apple.com/legal/privacy/fr-ww/" target="_blank" rel="noopener">politique de confidentialité d'Apple</a>
+        </li>
+        <li>Aucune donnée de localisation n'est stockée par Mino</li>
+      </ul>
+    </div>
+
+    <!-- 6. Sauvegarde iCloud -->
+    <div class="section">
+      <h3><span class="icon">☁️</span> Sauvegarde iCloud</h3>
+      <p>
+        Si vous avez activé la sauvegarde iCloud sur votre iPhone, les données de Mino
+        peuvent être incluses dans cette sauvegarde automatique gérée par Apple.
+        Cette sauvegarde est soumise aux
+        <a href="https://www.apple.com/legal/privacy/fr-ww/" target="_blank" rel="noopener">conditions d'Apple</a>
+        et reste sous votre contrôle dans les réglages de votre appareil.
+      </p>
+    </div>
+
+    <!-- 7. Droits -->
+    <div class="section">
+      <h3><span class="icon">⚖️</span> Vos droits (RGPD)</h3>
+      <p>
+        Conformément au Règlement Général sur la Protection des Données (RGPD),
+        vous disposez des droits suivants concernant vos données :
+      </p>
+      <ul>
+        <li><strong>Accès</strong> — consulter l'ensemble des données stockées</li>
+        <li><strong>Rectification</strong> — modifier toute information inexacte</li>
+        <li><strong>Suppression</strong> — effacer vos données à tout moment depuis l'application ou en la désinstallant</li>
+        <li><strong>Portabilité</strong> — exporter vos données sur demande</li>
+        <li><strong>Opposition</strong> — vous opposer à tout traitement</li>
+      </ul>
+      <p>
+        La suppression de l'application entraîne la suppression complète et définitive
+        de toutes les données stockées localement.
+      </p>
+    </div>
+
+    <!-- 8. Mineurs -->
+    <div class="section">
+      <h3><span class="icon">👶</span> Données relatives aux enfants</h3>
+      <p>
+        Mino est une application destinée aux parents. Les informations saisies
+        concernant les enfants (prénom, date de naissance, taille) sont
+        gérées exclusivement par le parent ou tuteur légal.
+      </p>
+      <p>
+        Mino ne collecte pas directement de données auprès de mineurs et
+        ne commercialise aucune information les concernant.
+      </p>
+    </div>
+
+    <!-- 9. Modifications -->
+    <div class="section">
+      <h3><span class="icon">🔄</span> Modifications de cette politique</h3>
+      <p>
+        Cette politique de confidentialité peut être mise à jour pour refléter
+        l'évolution de l'application. La date de dernière mise à jour est
+        indiquée en haut de cette page.
+      </p>
+      <p>
+        En cas de modification substantielle, une notification sera affichée
+        dans l'application lors de la prochaine ouverture.
+      </p>
+    </div>
+
+    <!-- Contact -->
+    <div class="contact-card">
+      <h3>Une question sur vos données ?</h3>
+      <p>Contactez-nous, nous vous répondons dans les meilleurs délais.</p>
+      <a href="mailto:contact.mino.support@gmail.com">contact.mino.support@gmail.com</a>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>© 2026 Sidibe Diouka · Application Mino</p>
+      <p style="margin-top:4px;">Tous droits réservés</p>
+    </div>
+
+  </div>
+</body>
+</html>
