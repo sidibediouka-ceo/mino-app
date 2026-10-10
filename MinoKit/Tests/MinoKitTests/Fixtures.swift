@@ -38,6 +38,6 @@ enum Fixtures {
     }
 
     static func weather(morning: Double, high: Double, rain: Double = 0, on date: Date = today) -> DayForecast {
-        DayForecast(date: date, morningC: morning, highC: high, lowC: morning - 2, precipitationChance: rain, condition: rain >= 0.5 ? .rain : .clear)
+        DayForecast(date: date, morningC: morning, highC: high, precipitationChance: rain, condition: rain >= 0.5 ? .rain : .clear)
     }
 }

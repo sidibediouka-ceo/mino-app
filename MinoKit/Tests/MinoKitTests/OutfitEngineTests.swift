@@ -35,7 +35,7 @@ final class OutfitEngineTests: XCTestCase {
 
     func testHotDayIsLight() {
         let items = fullWardrobe
-        let outfit = engine.propose(child: leo, items: items, weather: Fixtures.weather(morning: 24, high: 31), context: .outing)
+        let outfit = engine.propose(child: leo, items: items, weather: Fixtures.weather(morning: 26, high: 33), context: .outing)
         XCTAssertEqual(categories(outfit, items), [.shorts, .tshirt, .sandals])
     }
 

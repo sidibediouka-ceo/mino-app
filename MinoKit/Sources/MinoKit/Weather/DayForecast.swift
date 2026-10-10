@@ -27,7 +27,6 @@ public struct DayForecast: Equatable, Sendable {
     /// Apparent temperature around 8 am.
     public let morningC: Double
     public let highC: Double
-    public let lowC: Double
     /// 0…1
     public let precipitationChance: Double
     public let condition: SkyCondition
@@ -35,13 +34,12 @@ public struct DayForecast: Equatable, Sendable {
     public let isEstimate: Bool
 
     public init(
-        date: Date, morningC: Double, highC: Double, lowC: Double,
+        date: Date, morningC: Double, highC: Double,
         precipitationChance: Double, condition: SkyCondition, isEstimate: Bool = false
     ) {
         self.date = date
         self.morningC = morningC
         self.highC = highC
-        self.lowC = lowC
         self.precipitationChance = precipitationChance
         self.condition = condition
         self.isEstimate = isEstimate
@@ -62,7 +60,7 @@ public struct DayForecast: Equatable, Sendable {
         ]
         let normal = normals[calendar.component(.month, from: date) - 1]
         return DayForecast(
-            date: date, morningC: normal.low + 1, highC: normal.high, lowC: normal.low,
+            date: date, morningC: normal.low + 1, highC: normal.high,
             precipitationChance: 0.3, condition: .cloudy, isEstimate: true
         )
     }
