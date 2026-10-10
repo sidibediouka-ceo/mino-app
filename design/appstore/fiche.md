@@ -42,7 +42,7 @@ VOTRE VIE PRIVÉE, PAR CONCEPTION
 Mino utilise Apple Météo pour les prévisions.
 
 ## Mots-clés (100 caractères max, séparés par des virgules, sans espaces)
-tenue,enfant,vêtements,dressing,bébé,taille,météo,habiller,famille,garde-robe,vinted,tri,parents
+tenue,enfant,vêtements,dressing,bébé,taille,météo,habiller,famille,garde-robe,revente,tri,parents
 
 ## Catégories
 Principale : Style de vie — Secondaire : Productivité
