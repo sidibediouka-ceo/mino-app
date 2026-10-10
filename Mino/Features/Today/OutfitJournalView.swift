@@ -35,15 +35,18 @@ struct OutfitJournalView: View {
         let isPast = calendar.startOfDay(for: selectedDay) < today
         let isFuture = calendar.startOfDay(for: selectedDay) > today
         let dayPlans = plans.filter { calendar.isDate($0.day, inSameDayAs: selectedDay) }
+        // One dot per child with an outfit (worn, planned or prepared) on each day.
+        let markers = Dictionary(grouping: plans.filter { $0.child != nil && (!$0.outfit.pieces.isEmpty || $0.photo != nil) }) {
+            calendar.startOfDay(for: $0.day)
+        }.mapValues { dayPlans in
+            children.filter { child in dayPlans.contains { $0.child?.id == child.id } }.map { children.color(of: $0) }
+        }
 
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    DatePicker("Jour", selection: $selectedDay, in: ...lastDay, displayedComponents: .date)
-                        .datePickerStyle(.graphical)
-                        .environment(\.locale, Locale(identifier: "fr_FR"))
-                        .tint(Theme.accent)
-                        .minoCard(padding: 8)
+                    MonthCalendar(selection: $selectedDay, lastDay: lastDay, markers: markers)
+                        .minoCard(padding: 4)
 
                     Text(Formatting.longDate(selectedDay))
                         .font(.system(.title3, design: .rounded).weight(.bold))

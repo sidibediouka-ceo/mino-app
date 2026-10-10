@@ -11,7 +11,6 @@ struct WardrobeView: View {
     @State private var filter: FitFilter = .all
     @State private var adding = false
     @State private var sortBatch: SortBatch?
-    @State private var handMeDownFor: Child?
     /// Every screen of the tab is pushed by value on this one path.
     @State private var path = NavigationPath()
 
@@ -69,7 +68,6 @@ struct WardrobeView: View {
             .sheet(item: $sortBatch) { batch in
                 SortSessionView(garments: batch.garments, children: children, date: batch.date)
             }
-            .sheet(item: $handMeDownFor) { HandMeDownView(child: $0, date: .now) }
         }
     }
 
@@ -81,26 +79,8 @@ struct WardrobeView: View {
         let profile = child.profile
         let outgrown = garments.filter { scope.contains($0) && profile.fit(of: $0.item, on: .now) == .tooSmall }
         let visible = scope.visible(garments, profile: profile, filter: filter)
-        let fromFamily = FamilySnapshot(children: children, garments: garments).availableGarments(for: child, on: .now).count
 
         ChipPicker(options: FitFilter.allCases, selection: $filter, title: \.title)
-
-        if fromFamily > 0 {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(Formatting.count(fromFamily, "vêtement", "vêtements")) de la famille")
-                        .font(.system(.headline, design: .rounded))
-                        .foregroundStyle(Theme.ink)
-                    Text("Ils vont à \(child.name) en ce moment : inutile d'acheter.")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.secondaryText)
-                }
-                Spacer()
-                Button("Voir") { handMeDownFor = child }
-                    .buttonStyle(SecondaryButtonStyle())
-            }
-            .minoCard()
-        }
 
         if !outgrown.isEmpty {
             HStack {

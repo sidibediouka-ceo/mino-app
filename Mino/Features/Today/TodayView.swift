@@ -128,17 +128,14 @@ struct TodayView: View {
 
     private func header(forecast: DayForecast) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(Formatting.longDate(day))
-                .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                .foregroundStyle(Theme.secondaryText)
-            Text(showsTomorrow ? "Demain" : "Aujourd'hui")
-                .font(.system(size: 38, weight: .bold, design: .rounded))
-                .foregroundStyle(Theme.ink)
             Picker("Jour", selection: $showsTomorrow.animation(.snappy)) {
                 Text("Aujourd'hui").tag(false)
                 Text("Demain").tag(true)
             }
             .pickerStyle(.segmented)
+            Text(Formatting.longDate(day))
+                .font(.system(.title, design: .rounded).weight(.bold))
+                .foregroundStyle(Theme.ink)
             HStack(spacing: 14) {
                 Image(systemName: Formatting.symbol(for: forecast))
                     .symbolRenderingMode(.multicolor)

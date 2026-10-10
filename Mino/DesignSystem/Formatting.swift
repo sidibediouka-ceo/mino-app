@@ -92,6 +92,11 @@ enum Formatting {
         "\(value) \(value > 1 ? plural : singular)"
     }
 
+    /// "Octobre 2026".
+    static func month(_ date: Date) -> String {
+        sentence("\(monthFormatter.string(from: date)) \(Calendar.current.component(.year, from: date))")
+    }
+
     /// "Moins d'un mois", "18 mois", "4 ans".
     static func age(months: Int) -> String {
         switch months {

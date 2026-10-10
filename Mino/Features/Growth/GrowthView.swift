@@ -35,6 +35,13 @@ struct GrowthView: View {
                         let family = FamilySnapshot(children: children, garments: garments)
                         let color = children.color(of: child)
                         if let plan = family.passagePlan(for: child, covered: covered, calendar: .current) {
+                            let fromFamilyNow = family.availableGarments(for: child, on: .now).count
+                            // During a passage, step 2 already covers the family; otherwise say it here.
+                            if fromFamilyNow > 0 && !plan.passage.isUnderway(on: .now) {
+                                FamilyNowCard(child: child, color: color, count: fromFamilyNow) {
+                                    handMeDown = HandMeDownRequest(child: child, date: .now)
+                                }
+                            }
                             PassageCard(
                                 child: child, color: color, plan: plan, family: family,
                                 onSort: { sortBatch = SortBatch(garments: $0, date: plan.passage.date) },
@@ -79,6 +86,36 @@ struct GrowthView: View {
                 if let id { selectedID = id }
             }
         }
+    }
+}
+
+/// Clothes from the boxes or an older sibling that fit the child today.
+private struct FamilyNowCard: View {
+    let child: Child
+    let color: Color
+    let count: Int
+    let onShow: () -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.title3)
+                .foregroundStyle(color)
+                .frame(width: 44, height: 44)
+                .background(color.opacity(0.15), in: Circle())
+            VStack(alignment: .leading, spacing: 4) {
+                Text(Formatting.count(count, "vêtement de la famille", "vêtements de la famille"))
+                    .font(.system(.headline, design: .rounded))
+                    .foregroundStyle(Theme.ink)
+                Text("Ils vont à \(child.name) en ce moment : inutile d'acheter.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            Spacer()
+            Button("Voir", action: onShow)
+                .buttonStyle(SecondaryButtonStyle())
+        }
+        .minoCard()
     }
 }
 
