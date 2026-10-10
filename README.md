@@ -39,7 +39,7 @@ echo 'DEVELOPMENT_TEAM = ABCDE12345' > Config/Local.xcconfig
 
 Ce fichier n'est pas versionné et `xcodegen` le relie au projet : l'équipe n'est plus perdue à chaque régénération.
 
-Pour la météo, activez la capability **WeatherKit** pour l'identifiant `app.mino.ios` dans le portail Apple Developer, puis choisissez votre équipe dans Xcode. Sans WeatherKit, Mino fonctionne avec une estimation de saison.
+Pour la météo, activez la capability **WeatherKit** pour l'identifiant `com.diouka.mino` dans le portail Apple Developer, puis choisissez votre équipe dans Xcode. Sans WeatherKit, Mino fonctionne avec une estimation de saison.
 
 ## Tests
 

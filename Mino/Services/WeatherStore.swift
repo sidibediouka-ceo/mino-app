@@ -95,7 +95,7 @@ final class WeatherStore {
             isAuthentication = String(describing: error).contains("JWTAuthenticator")
         }
         return isAuthentication
-            ? "Apple Météo ne reconnaît pas encore l'app : WeatherKit n'est pas actif dans le profil de signature de app.mino.ios."
+            ? "Apple Météo ne reconnaît pas encore l'app : WeatherKit n'est pas actif dans le profil de signature de \(Bundle.main.bundleIdentifier ?? "l'app")."
             : "Apple Météo n'a pas répondu (\(error.localizedDescription))."
     }
 
