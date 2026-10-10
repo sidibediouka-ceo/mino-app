@@ -5,6 +5,7 @@ import Foundation
 public enum CategoryGuess {
     /// Ordered from most to least specific so that "raincoat" wins over "coat" and "t_shirt" over "shirt".
     private static let keywords: [(String, GarmentCategory)] = [
+        ("onesie", .bodysuit), ("bodysuit", .bodysuit), ("babygrow", .bodysuit),
         ("raincoat", .raincoat), ("poncho", .raincoat), ("rain", .raincoat),
         ("t_shirt", .tshirt), ("t-shirt", .tshirt), ("tshirt", .tshirt), ("jersey", .tshirt),
         ("turtleneck", .turtleneck), ("polo neck", .turtleneck),

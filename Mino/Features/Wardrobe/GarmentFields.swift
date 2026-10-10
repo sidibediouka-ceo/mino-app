@@ -19,8 +19,11 @@ struct GarmentFields: View {
 
     private var kind: SizeKind { category.sizeKind }
 
+    /// Bodies only show up for babies; the chosen category always stays listed.
     private var categoryOptions: [GarmentCategory] {
-        suggested + GarmentCategory.allCases.filter { !suggested.contains($0) }
+        let childSize = sizing?.currentSize(.clothing, on: .now) ?? size
+        return (suggested + GarmentCategory.allCases.filter { !suggested.contains($0) })
+            .filter { $0 == category || $0.isOffered(forClothingSize: childSize) }
     }
 
     var body: some View {
@@ -138,15 +141,18 @@ struct GarmentDraft: Identifiable {
     var needsReview: Bool
 
     init(analysis: GarmentAnalysis, sizing: ChildProfile?) {
-        let category = analysis.categories.first ?? .tshirt
+        // A guessed body is no use for a child who has outgrown them.
+        let childSize = sizing?.currentSize(.clothing, on: .now)
+        let categories = analysis.categories.filter { category in childSize.map(category.isOffered(forClothingSize:)) ?? true }
+        let category = categories.first ?? .tshirt
         let readSize = SizeLabelParser.size(in: analysis.texts, kind: category.sizeKind)
         self.photo = analysis.photo
         self.category = category
         self.color = analysis.color ?? .white
         self.size = readSize ?? Self.defaultSize(for: category.sizeKind, sizing: sizing)
-        self.suggestions = Array(analysis.categories.prefix(3))
+        self.suggestions = Array(categories.prefix(3))
         self.sizeWasRead = readSize != nil
-        self.needsReview = analysis.categories.isEmpty
+        self.needsReview = categories.isEmpty
     }
 
     /// Most garments a parent photographs fit the child today.

@@ -70,8 +70,8 @@ public enum NeedGroup: String, CaseIterable, Sendable {
 
     var categories: Set<GarmentCategory> {
         switch self {
-        case .shortSleeveTops: return [.tshirt]
-        case .longSleeveTops: return [.longSleeve, .turtleneck]
+        case .shortSleeveTops: return [.tshirt, .bodysuit]
+        case .longSleeveTops: return [.longSleeve, .turtleneck, .longSleeveBodysuit]
         case .layers: return [.sweater, .cardigan]
         case .longBottoms: return [.pants, .overalls]
         case .summerBottoms: return [.shorts, .dress, .playsuit]
