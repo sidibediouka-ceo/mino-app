@@ -1,7 +1,7 @@
-"""Draws the Mino app icon (the hanger-mascot) and exports every variant.
+"""Draws the Mino app icon (the mascot) and exports every variant.
 
-The hook is the mascot's curl, the hanger is its soft body, the face sits
-inside. One geometry, several palettes, so all variants stay identical.
+One geometry, several palettes, so all variants stay identical. The mascot
+is drawn in a 180-unit box, then scaled and centred on the 1024 canvas.
 
 Usage: python3 design/icon/make_icon.py   (needs `pip install cairosvg`)
 """
@@ -15,45 +15,44 @@ APPICON = ROOT / "Mino" / "Resources" / "Assets.xcassets" / "AppIcon.appiconset"
 
 FOREST = "#1E3A34"
 CREAM = "#F5F1EA"
-SAGE = "#A7B89C"
-DEEP_SAGE = "#6F8A66"
-ROSE = "#E9B8B0"
 
-BODY = ("M 512 452 C 630 516, 750 590, 796 648 C 846 712, 820 722, 752 722 "
-        "L 272 722 C 204 722, 178 712, 228 648 C 274 590, 394 516, 512 452 Z")
-HOOK = "M 438 330 A 74 74 0 1 1 512 404 L 512 452"
-LEAVES = ("M 514 204 C 492 150, 452 146, 408 156 C 428 206, 472 220, 514 204 Z "
-          "M 518 198 C 542 140, 600 128, 652 136 C 632 196, 582 216, 518 198 Z")
+# Body: from the bottom left, up to the tuft, then the curl; the right side
+# is a separate stroke, leaving the soft gaps of the original drawing.
+LEFT = ("M 52 140 C 38 132, 27 117, 27 101 C 27 85, 36 74, 48 66 "
+        "C 54 61, 55 50, 57 40 C 60 24, 65 10, 74 10 C 84 10, 90 26, 96 38 "
+        "C 100 46, 102 52, 107 50 C 112 48, 116 38, 124 35 C 129 33, 134 35, 135 38")
+RIGHT = "M 125 66 C 141 75, 152 90, 152 106 C 152 122, 140 136, 122 141"
+EYES = "M 58 101 C 60 109, 74 109, 76 101 M 100 101 C 102 109, 116 109, 118 101"
+SMILE = "M 79 119 C 82 127, 94 127, 97 119"
+
+SCALE = 4.3
+CENTER = (89.5, 76)  # visual centre of the drawing, in mascot units
 
 
-def svg(background, glyph, sprout, face, cheeks):
+def svg(background, line):
     fill = f'<rect width="1024" height="1024" fill="{background}"/>' if background else ""
-    blush = (f'<circle cx="398" cy="646" r="18" fill="{cheeks}"/>'
-             f'<circle cx="626" cy="646" r="18" fill="{cheeks}"/>') if cheeks else ""
+    dx, dy = 512 - CENTER[0] * SCALE, 512 - CENTER[1] * SCALE
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
 {fill}
-<g transform="translate(0 70)" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M 512 258 L 516 200" stroke="{sprout}" stroke-width="16"/>
-  <path d="{LEAVES}" fill="{sprout}" stroke="none"/>
-  <path d="{HOOK}" stroke="{glyph}" stroke-width="46"/>
-  <path d="{BODY}" stroke="{glyph}" stroke-width="46"/>
-  {blush}
-  <path d="M 424 606 Q 450 634 476 606 M 548 606 Q 574 634 600 606" stroke="{face}" stroke-width="26"/>
-  <path d="M 488 654 Q 512 676 536 654" stroke="{face}" stroke-width="22"/>
+<g transform="translate({dx:.1f} {dy:.1f}) scale({SCALE})" fill="none" stroke="{line}" stroke-linecap="round" stroke-linejoin="round">
+  <path d="{LEFT}" stroke-width="8"/>
+  <path d="{RIGHT}" stroke-width="8"/>
+  <path d="{EYES}" stroke-width="6.5"/>
+  <path d="{SMILE}" stroke-width="6.5"/>
 </g>
 </svg>"""
 
 
 VARIANTS = {
     # iOS asset catalog: default (opaque), dark and tinted appearances.
-    "AppIcon.png": svg(FOREST, CREAM, SAGE, CREAM, ROSE),
-    "AppIcon-Dark.png": svg(None, CREAM, SAGE, CREAM, ROSE),
-    "AppIcon-Tinted.png": svg(None, "#FFFFFF", "#B4B4B4", "#FFFFFF", "#8C8C8C"),
+    "AppIcon.png": svg(FOREST, CREAM),
+    "AppIcon-Dark.png": svg(None, CREAM),
+    "AppIcon-Tinted.png": svg(None, "#FFFFFF"),
     # Brand files for the site, documents and stores.
-    "Mino-icon-white.png": svg("#FFFFFF", FOREST, DEEP_SAGE, FOREST, ROSE),
-    "Mino-icon-black.png": svg("#000000", CREAM, SAGE, CREAM, ROSE),
-    "Mino-icon-transparent-forest.png": svg(None, FOREST, DEEP_SAGE, FOREST, ROSE),
-    "Mino-icon-transparent-cream.png": svg(None, CREAM, SAGE, CREAM, ROSE),
+    "Mino-icon-white.png": svg("#FFFFFF", FOREST),
+    "Mino-icon-black.png": svg("#000000", CREAM),
+    "Mino-icon-transparent-forest.png": svg(None, FOREST),
+    "Mino-icon-transparent-cream.png": svg(None, CREAM),
 }
 
 
