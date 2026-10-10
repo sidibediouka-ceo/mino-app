@@ -5,7 +5,7 @@
 | Principe | Traduction technique |
 |---|---|
 | **Vie privée par construction** | Minimisation : un prénom ou surnom, un âge et des tailles, rien de plus. Aucun serveur, aucun compte, aucun SDK tiers. Toute l'analyse d'image se fait sur l'appareil (Apple Vision). La localisation est approximative, ponctuelle et jamais stockée. |
-| **L'intelligence est testable** | Toute la logique métier vit dans `MinoKit`, un package Swift pur (Foundation seulement), testé hors de l'app et même sous Linux. |
+| **L'intelligence est testable** | Toute la logique métier vit dans `MinoKit` (Swift pur, Foundation seulement). L'app l'intègre comme framework du projet Xcode, sans résolution de package ; le même code est un package Swift testé hors de l'app, même sous Linux. |
 | **Natif et sobre** | SwiftUI, SwiftData, Observation, Swift Charts, WeatherKit et Vision, sur iOS 17 minimum. Zéro dépendance externe. |
 | **Aucun code mort** | Chaque type et chaque fonction est utilisé. Pas d'abstraction « au cas où » : un protocole n'apparaît que lorsqu'il a deux implémentations. |
 | **Les données survivent à chaque mise à jour** | Une mise à jour de l'app ne touche jamais aux données. Tout changement de modèle reste additif (nouvelle propriété avec une valeur par défaut), et SwiftData migre alors la base sur place. Une transformation plus profonde passera par un `VersionedSchema` et un plan de migration, jamais par une réinstallation. Si la base ne peut pas être ouverte, Mino l'indique au lieu de repartir de zéro. |

@@ -6,10 +6,6 @@ options:
   developmentLanguage: fr
   createIntermediateGroups: true
 
-packages:
-  MinoKit:
-    path: MinoKit
-
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -23,7 +19,7 @@ targets:
     sources:
       - path: Mino
     dependencies:
-      - package: MinoKit
+      - target: MinoKit
     entitlements:
       path: Mino/Mino.entitlements
       properties:
@@ -46,3 +42,16 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: YES
+
+  # Mino's domain logic, built as a framework inside the project (no package resolution).
+  # MinoKit/Package.swift builds the same sources for `swift test`.
+  MinoKit:
+    type: framework
+    platform: iOS
+    sources:
+      - path: MinoKit/Sources/MinoKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.mino.kit
+        GENERATE_INFOPLIST_FILE: YES
+        SKIP_INSTALL: YES

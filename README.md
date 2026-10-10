@@ -11,7 +11,7 @@ Application iOS native (SwiftUI · SwiftData · Vision · WeatherKit). Tout rest
 ## Structure
 
 ```
-MinoKit/          Package Swift pur : toute l'intelligence de Mino, avec ses tests
+MinoKit/          Toute l'intelligence de Mino (Swift pur) : framework dans le projet Xcode, package Swift pour les tests
 Mino/             Application iOS (SwiftUI)
   App/            Point d'entrée, navigation
   DesignSystem/   Couleurs, composants, formulations françaises
