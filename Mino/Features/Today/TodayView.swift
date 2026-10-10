@@ -143,29 +143,42 @@ struct TodayView: View {
                 Text("Demain").tag(true)
             }
             .pickerStyle(.segmented)
-            Text(Formatting.longDate(day))
-                .font(.system(.title, design: .rounded).weight(.bold))
-                .foregroundStyle(Theme.ink)
-            HStack(spacing: 14) {
-                Image(systemName: Formatting.symbol(for: forecast))
-                    .symbolRenderingMode(.multicolor)
-                    .font(.system(size: 40))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(Int(forecast.morningC.rounded()))° le matin · \(Int(forecast.highC.rounded()))° l'après-midi")
-                        .font(.system(.headline, design: .rounded))
-                        .foregroundStyle(Theme.ink)
-                    Text(weatherNote(forecast))
-                        .font(.subheadline)
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(Formatting.weekday(day))
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         .foregroundStyle(Theme.secondaryText)
+                    Text(Formatting.dayMonth(day))
+                        .font(.system(.title, design: .rounded).weight(.bold))
+                        .foregroundStyle(Theme.ink)
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Formatting.longDate(day))
+                .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 2) {
+                    HStack(spacing: 8) {
+                        Image(systemName: Formatting.symbol(for: forecast))
+                            .symbolRenderingMode(.multicolor)
+                            .font(.system(size: 30))
+                        Text("\(Int(forecast.highC.rounded()))°")
+                            .font(.system(.title, design: .rounded).weight(.semibold))
+                            .foregroundStyle(Theme.ink)
+                    }
+                    Text("\(Int(forecast.morningC.rounded()))° le matin · \(weatherNote(forecast))")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.secondaryText)
+                        .multilineTextAlignment(.trailing)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(Int(forecast.morningC.rounded()))° le matin, \(Int(forecast.highC.rounded()))° l'après-midi. \(weatherNote(forecast))")
             }
-            .accessibilityElement(children: .combine)
         }
     }
 
     private func weatherNote(_ forecast: DayForecast) -> String {
-        if forecast.isEstimate { return "Estimation de saison, météo indisponible" }
-        if forecast.isRainy { return "Pluie probable (\(Int((forecast.precipitationChance * 100).rounded())) %)" }
+        if forecast.isEstimate { return "Estimation de saison" }
+        if forecast.isRainy { return "Pluie \(Int((forecast.precipitationChance * 100).rounded())) %" }
         return forecast.condition == .clear ? "Grand soleil" : "Sans pluie"
     }
 

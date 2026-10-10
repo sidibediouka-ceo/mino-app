@@ -26,6 +26,20 @@ enum Formatting {
         return formatter
     }()
 
+    private static let weekdayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.dateFormat = "EEEE"
+        return formatter
+    }()
+
+    private static let dayMonthFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.setLocalizedDateFormatFromTemplate("d MMMM")
+        return formatter
+    }()
+
     /// "mi-février", "début mars", "fin janvier 2028".
     static func period(_ date: Date, calendar: Calendar = .current) -> String {
         let day = calendar.component(.day, from: date)
@@ -56,6 +70,16 @@ enum Formatting {
 
     static func longDate(_ date: Date) -> String {
         sentence(longFormatter.string(from: date))
+    }
+
+    /// "Samedi", the small line above a two-level date.
+    static func weekday(_ date: Date) -> String {
+        sentence(weekdayFormatter.string(from: date))
+    }
+
+    /// "10 octobre", the large line of a two-level date.
+    static func dayMonth(_ date: Date) -> String {
+        dayMonthFormatter.string(from: date)
     }
 
     /// Capitalises the first letter only, as French sentences and dates expect.
