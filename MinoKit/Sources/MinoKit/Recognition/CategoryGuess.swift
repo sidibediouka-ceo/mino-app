@@ -28,13 +28,42 @@ public enum CategoryGuess {
         ("shirt", .longSleeve), ("blouse", .longSleeve), ("top", .longSleeve)
     ]
 
+    /// The families Mino's own classifier (MinoGarmentClassifier) tells apart, and the categories
+    /// each one covers, most common first.
+    public static let classifierFamilies: [String: [GarmentCategory]] = [
+        "tshirt": [.tshirt, .bodysuit],
+        "longsleeve": [.longSleeve, .turtleneck, .longSleeveBodysuit],
+        "knit": [.sweater, .cardigan],
+        "pants": [.pants, .overalls, .pajamas],
+        "shorts_skirt": [.shorts],
+        "dress": [.dress, .playsuit],
+        "outerwear": [.lightJacket, .coat, .raincoat],
+        "shoes": [.sneakers, .boots, .sandals],
+        "hat": [.coldAccessory],
+        "bodysuit": [.bodysuit, .longSleeveBodysuit],
+        "tights": [.tights]
+    ]
+
     /// Categories suggested by the labels, most likely first. Weak signals are dropped.
+    ///
+    /// Mino's classifier knows children's garment families well; Apple's general classifier
+    /// adds detail within a family ("raincoat", "cardigan"); the outline rules out what cannot
+    /// have that shape.
     ///
     /// With the garment's outline, categories that cannot have that shape are pushed down and
     /// those that can are lifted, so that "jeans" on a denim jacket no longer reads as trousers
     /// and a photo the classifier could not read still gets a sensible first guess.
-    public static func ranked(fromLabels labels: [(identifier: String, confidence: Float)], shape: GarmentShape? = nil) -> [GarmentCategory] {
+    public static func ranked(
+        fromLabels labels: [(identifier: String, confidence: Float)],
+        shape: GarmentShape? = nil,
+        families: [(identifier: String, confidence: Float)] = []
+    ) -> [GarmentCategory] {
         var scores: [GarmentCategory: Float] = [:]
+        for family in families {
+            for (rank, category) in (classifierFamilies[family.identifier] ?? []).enumerated() {
+                scores[category, default: 0] += family.confidence * (rank == 0 ? 1.2 : 0.7)
+            }
+        }
         for label in labels where label.confidence >= 0.1 {
             let identifier = label.identifier.lowercased()
             if let match = keywords.first(where: { identifier.contains($0.0) }) {

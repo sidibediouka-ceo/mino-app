@@ -102,6 +102,16 @@ final class GarmentShapeTests: XCTestCase {
         XCTAssertEqual(CategoryGuess.ranked(fromLabels: [("sandal", 0.3)], shape: sneakers).first, .sandals)
     }
 
+    func testMinosClassifierLeadsAndAppleRefinesWithinTheFamily() {
+        let jacket = samples.first { $0.name == "L-20" }?.shape
+        XCTAssertEqual(CategoryGuess.ranked(fromLabels: [], shape: jacket, families: [("outerwear", 0.9)]).first, .lightJacket)
+        XCTAssertEqual(CategoryGuess.ranked(fromLabels: [("raincoat", 0.6)], shape: jacket, families: [("outerwear", 0.9)]).first, .raincoat)
+        // A wrong family is still overruled by an outline that cannot have it.
+        let tights = samples.first { $0.category == .tights }?.shape
+        XCTAssertEqual(CategoryGuess.ranked(fromLabels: [], shape: tights, families: [("longsleeve", 0.5), ("tights", 0.4)]).first, .tights)
+        XCTAssertEqual(Set(CategoryGuess.classifierFamilies.values.flatMap { $0 }), Set(GarmentCategory.allCases))
+    }
+
     func testATinyMaskIsIgnored() {
         XCTAssertNil(GarmentShape(mask: [[true]], aspect: 1))
     }

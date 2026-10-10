@@ -1,4 +1,5 @@
 import CoreImage
+import CoreML
 import MinoKit
 import UIKit
 import Vision
@@ -26,16 +27,18 @@ enum GarmentAnalyzer {
             let cutout = liftSubject(from: cgImage)
             let stored = redraw(UIImage(cgImage: cutout ?? cgImage), maxDimension: 600)
             // The garment alone on white reads better than the photo with its background.
-            let labels = classify(cutout.flatMap { onWhite($0) } ?? cgImage)
+            let sheet = cutout.flatMap { onWhite($0) } ?? cgImage
+            let labels = classify(sheet)
+            let families = recognizeFamily(in: sheet)
             let shape = cutout.flatMap { outline(of: $0) }
             #if DEBUG
             // What Apple's classifier saw, to tune Mino's keywords from the Xcode console.
-            print("Mino recognition:", shape?.family as Any, labels.prefix(8).map { "\($0.identifier) \(Int($0.confidence * 100))%" })
+            print("Mino recognition:", shape?.family as Any, families.prefix(3).map { "\($0.identifier) \(Int($0.confidence * 100))%" }, labels.prefix(8).map { "\($0.identifier) \(Int($0.confidence * 100))%" })
             #endif
             return GarmentAnalysis(
                 photo: stored.pngData() ?? Data(),
-                categories: CategoryGuess.ranked(fromLabels: labels, shape: shape),
-                isRecognized: !CategoryGuess.ranked(fromLabels: labels).isEmpty,
+                categories: CategoryGuess.ranked(fromLabels: labels, shape: shape, families: families),
+                isRecognized: (families.first?.confidence ?? 0) >= 0.5 || !CategoryGuess.ranked(fromLabels: labels).isEmpty,
                 color: dominantColor(of: cutout ?? cgImage, isCutout: cutout != nil),
                 texts: recognizeText(in: cgImage)
             )
@@ -68,6 +71,23 @@ enum GarmentAnalyzer {
         let request = VNClassifyImageRequest()
         guard (try? VNImageRequestHandler(cgImage: image).perform([request])) != nil else { return [] }
         return Array((request.results ?? []).prefix(20).map { (identifier: $0.identifier, confidence: $0.confidence) })
+    }
+
+    /// Mino's own classifier, trained on children's garment families (see design/classifier).
+    private static let familyModel: VNCoreMLModel? = {
+        guard let url = Bundle.main.url(forResource: "MinoGarmentClassifier", withExtension: "mlmodelc"),
+              let model = try? MLModel(contentsOf: url) else { return nil }
+        return try? VNCoreMLModel(for: model)
+    }()
+
+    private static func recognizeFamily(in image: CGImage) -> [(identifier: String, confidence: Float)] {
+        guard let model = familyModel else { return [] }
+        let request = VNCoreMLRequest(model: model)
+        // Trained on whole garments squeezed to a square, like this.
+        request.imageCropAndScaleOption = .scaleFill
+        guard (try? VNImageRequestHandler(cgImage: image).perform([request])) != nil else { return [] }
+        let results = (request.results as? [VNClassificationObservation]) ?? []
+        return results.prefix(3).map { (identifier: $0.identifier, confidence: $0.confidence) }
     }
 
     private static func recognizeText(in image: CGImage) -> [String] {
