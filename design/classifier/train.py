@@ -165,7 +165,7 @@ def export(model, out):
         inputs=[ct.ImageType(name="image", shape=(1, 3, SIZE, SIZE), scale=scale, bias=bias)],
         classifier_config=ct.ClassifierConfig(CLASSES),
         convert_to="neuralnetwork",
-        minimum_deployment_target=ct.target.iOS15,
+        minimum_deployment_target=ct.target.iOS14,
     )
     from coremltools.models.neural_network import quantization_utils
     mlmodel = quantization_utils.quantize_weights(mlmodel, nbits=16)
