@@ -4,8 +4,13 @@ import MinoKit
 import Observation
 import WeatherKit
 
+/// Where the location permission stands, in the parent's terms.
+enum LocationAccess {
+    case notAsked, refused, allowed
+}
+
 /// Daily forecasts from Apple WeatherKit, with a seasonal estimate whenever they are unavailable
-/// (no network, location refused), so Mino always has an answer.
+/// (no network, location refused), so Mino always has an answer, and says why.
 @Observable
 @MainActor
 final class WeatherStore {
@@ -13,26 +18,45 @@ final class WeatherStore {
     private(set) var attribution: WeatherAttribution?
     /// Changes whenever new forecasts arrive, so plans can be refreshed.
     private(set) var version = 0
-    /// Location refused: forecasts stay seasonal estimates until the parent allows it.
-    private(set) var locationDenied = false
+    private(set) var locationAccess: LocationAccess = .notAsked
+    /// When Apple Weather last answered.
+    private(set) var lastUpdate: Date?
+    /// Why the last attempt failed, in plain words; nil when the forecast is live.
+    private(set) var failure: String?
 
     private let location = LocationProvider()
-    @ObservationIgnored private var lastRefresh: Date?
     private let calendar = Calendar.current
+    /// One request at a time: overlapping ones would only see a busy location provider.
+    @ObservationIgnored private var isRefreshing = false
+
+    /// Reads the current permission without asking anything.
+    func updateLocationAccess() {
+        locationAccess = location.access
+    }
 
     func forecast(for day: Date) -> DayForecast {
         forecasts[calendar.startOfDay(for: day)] ?? .seasonalEstimate(for: day, calendar: calendar)
     }
 
-    func refresh() async {
+    /// Fetches the forecast, at most every 30 minutes unless `force` is set (a parent's tap, or
+    /// coming back to the app after changing a permission).
+    func refresh(force: Bool = false) async {
         if attribution == nil {
             // Needed to credit Apple Weather; it does not depend on the location.
             attribution = try? await WeatherService.shared.attribution
         }
-        if let lastRefresh, Date.now.timeIntervalSince(lastRefresh) < 30 * 60 { return }
+        if !force, let lastUpdate, Date.now.timeIntervalSince(lastUpdate) < 30 * 60 { return }
+        guard !isRefreshing else { return }
+        isRefreshing = true
+        defer { isRefreshing = false }
         let place = await location.currentLocation()
-        locationDenied = location.isDenied
-        guard let place else { return }
+        locationAccess = location.access
+        guard let place else {
+            failure = locationAccess == .refused
+                ? "La localisation est refusée pour Mino."
+                : "La position de l'iPhone est introuvable pour le moment."
+            return
+        }
         do {
             let service = WeatherService.shared
             let (daily, hourly) = try await service.weather(for: place, including: .daily, .hourly)
@@ -53,10 +77,13 @@ final class WeatherStore {
                 )
             }
             forecasts = updated
-            lastRefresh = .now
+            lastUpdate = .now
+            failure = nil
             version += 1
+        } catch WeatherError.permissionDenied {
+            failure = "Apple Météo refuse l'accès : la capability WeatherKit de l'identifiant app.mino.ios ou l'équipe de signature n'est pas reconnue."
         } catch {
-            // Keep the seasonal estimate; the next refresh will try again.
+            failure = "Apple Météo n'a pas répondu (\(error.localizedDescription))."
         }
     }
 

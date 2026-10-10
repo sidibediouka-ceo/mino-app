@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(WeatherStore.self) private var weather
     @Query(sort: \Child.createdAt) private var children: [Child]
     @AppStorage("eveningReminderEnabled") private var reminderEnabled = false
     @AppStorage("eveningReminderMinutes") private var reminderMinutes = 19 * 60 + 30
@@ -27,6 +28,8 @@ struct SettingsView: View {
                     }
                     Button("Ajouter un enfant", systemImage: "plus") { addingChild = true }
                 }
+
+                weatherSection
 
                 Section {
                     Toggle("Le soir, c'est prêt", isOn: reminderToggle)
@@ -81,6 +84,46 @@ struct SettingsView: View {
             } message: {
                 Text("Enfants, vêtements, photos et mesures seront définitivement supprimés de cet iPhone.")
             }
+        }
+    }
+
+    /// The real state of the weather, and the one action that moves it forward.
+    private var weatherSection: some View {
+        Section {
+            LabeledContent("Localisation", value: accessLabel)
+            LabeledContent("Source", value: weather.lastUpdate.map {
+                "Apple Météo · \($0.formatted(date: .omitted, time: .shortened))"
+            } ?? "Estimation de saison")
+            if let failure = weather.failure {
+                Text(failure)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            switch weather.locationAccess {
+            case .notAsked:
+                Button("Autoriser la localisation") { Task { await weather.refresh(force: true) } }
+            case .refused:
+                if let settings = URL(string: UIApplication.openSettingsURLString) {
+                    Link("Ouvrir les réglages d'iOS", destination: settings)
+                }
+            case .allowed:
+                Button("Actualiser la météo") { Task { await weather.refresh(force: true) } }
+            }
+        } header: {
+            Text("Météo")
+        } footer: {
+            Text(weather.locationAccess == .refused
+                 ? "iOS ne pose la question qu'une fois. Dans Réglages › Mino › Position, choisissez « Lorsque l'app est active », puis revenez : la météo se met à jour."
+                 : "Position approximative, demandée au moment de la météo et jamais enregistrée.")
+        }
+        .onAppear { weather.updateLocationAccess() }
+    }
+
+    private var accessLabel: String {
+        switch weather.locationAccess {
+        case .notAsked: return "Pas encore demandée"
+        case .refused: return "Refusée"
+        case .allowed: return "Autorisée"
         }
     }
 

@@ -12,9 +12,12 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
         manager.desiredAccuracy = kCLLocationAccuracyReduced
     }
 
-    /// The parent refused (or a restriction forbids) location access.
-    var isDenied: Bool {
-        manager.authorizationStatus == .denied || manager.authorizationStatus == .restricted
+    var access: LocationAccess {
+        switch manager.authorizationStatus {
+        case .notDetermined: return .notAsked
+        case .authorizedWhenInUse, .authorizedAlways: return .allowed
+        default: return .refused
+        }
     }
 
     func currentLocation() async -> CLLocation? {

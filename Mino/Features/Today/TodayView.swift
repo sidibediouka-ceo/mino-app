@@ -9,6 +9,7 @@ import WeatherKit
 struct TodayView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(WeatherStore.self) private var weather
     @Environment(AppRouter.self) private var router
     @Query(sort: \Child.createdAt) private var children: [Child]
@@ -103,6 +104,11 @@ struct TodayView: View {
             await scheduleReminders()
         }
         .sheet(isPresented: $showingSettings) { SettingsView() }
+        .onChange(of: scenePhase) { _, phase in
+            // Back from the iOS settings (a permission may have changed): try again right away.
+            guard phase == .active, weather.failure != nil else { return }
+            Task { await weather.refresh(force: true) }
+        }
         .sheet(isPresented: $showingJournal) { OutfitJournalView() }
         .sheet(item: $handMeDownFor) { HandMeDownView(child: $0, date: .now) }
         .sheet(item: $editingPlan) { plan in
@@ -184,18 +190,15 @@ struct TodayView: View {
         .minoCard()
     }
 
-    /// Says why the weather is only a seasonal estimate, and how to get the real one.
+    /// Says why the weather is only a seasonal estimate, and where to fix it.
     private var weatherUnavailable: some View {
         VStack(spacing: 8) {
-            Text(weather.locationDenied
-                 ? "Météo estimée selon la saison : autorisez la localisation pour la météo Apple du jour."
-                 : "Météo estimée selon la saison : la météo Apple n'a pas pu être chargée.")
+            Text("Météo estimée selon la saison. \(weather.failure ?? "")")
                 .font(.caption)
                 .multilineTextAlignment(.center)
-            if weather.locationDenied, let settings = URL(string: UIApplication.openSettingsURLString) {
-                Link("Ouvrir les réglages", destination: settings)
-                    .font(.caption.weight(.semibold))
-            }
+            Button("Réglages de la météo") { showingSettings = true }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.accent)
         }
         .foregroundStyle(Theme.secondaryText)
         .frame(maxWidth: .infinity)
