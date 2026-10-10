@@ -47,11 +47,18 @@ public struct OutfitEngine {
             }
         }
 
-        // A dress on a cool day: a long-sleeved top underneath, if there is one.
-        if thermal <= .cool, chosen.contains(where: { $0.item.category == .dress }),
-           let under = rank(.top).first(where: { $0.item.category != .tshirt }) {
-            chosen.append(under)
-            pieces.append(OutfitPiece(slot: .top, itemID: under.item.id))
+        // Under a dress: a body for a baby whatever the weather (long-sleeved when cool), and a
+        // long-sleeved top for an older child on a cool day.
+        if chosen.contains(where: { $0.item.category == .dress }) {
+            let tops = rank(.top)
+            let isBaby = child.ageInMonths(at: weather.date) < 36
+            let bodysuit = isBaby ? tops.first { $0.item.category.isBodysuit && (thermal > .cool || $0.item.category == .longSleeveBodysuit) } : nil
+            let warm = thermal <= .cool ? tops.first { $0.item.category != .tshirt && $0.item.category != .bodysuit } : nil
+            let anyBodysuit = isBaby ? tops.first { $0.item.category.isBodysuit } : nil
+            if let under = bodysuit ?? warm ?? anyBodysuit {
+                chosen.append(under)
+                pieces.append(OutfitPiece(slot: .top, itemID: under.item.id))
+            }
         }
 
         // Bare legs under a dress or a short on a cool day: add a collant if there is one.
@@ -144,6 +151,11 @@ public struct OutfitEngine {
         case (.tshirt, .hot), (.tshirt, .warm): return 2
         case (.tshirt, .mild): return 1
         case (.tshirt, .cool): return 0.2
+        case (.bodysuit, .hot), (.bodysuit, .warm): return 2
+        case (.bodysuit, .mild): return 1.2
+        case (.bodysuit, .cool): return 0.4
+        case (.longSleeveBodysuit, .freezing), (.longSleeveBodysuit, .cold), (.longSleeveBodysuit, .cool): return 2
+        case (.longSleeveBodysuit, .mild): return 1.2
         case (.longSleeve, .freezing), (.longSleeve, .cold), (.longSleeve, .cool): return 2
         case (.longSleeve, .mild): return 1
         case (.turtleneck, .freezing): return 2.6

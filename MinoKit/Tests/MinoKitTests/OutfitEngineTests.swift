@@ -93,6 +93,39 @@ final class OutfitEngineTests: XCTestCase {
         XCTAssertEqual(categories(outfit, items), [.longSleeve, .dress, .sneakers])
     }
 
+    func testWarmDayPutsAShortBodyUnderABabysDress() {
+        let ines = Fixtures.ines
+        let dress = Fixtures.item(.dress, owner: ines, size: 92, color: .yellow)
+        let bodysuit = Fixtures.item(.bodysuit, owner: ines, size: 92, color: .white)
+        let items = [dress, bodysuit, Fixtures.item(.longSleeveBodysuit, owner: ines, size: 92), Fixtures.item(.sandals, owner: ines, size: 23)]
+        let outfit = engine.propose(child: ines, items: items, weather: Fixtures.weather(morning: 20, high: 27), context: .celebration)
+        XCTAssertEqual(categories(outfit, items), [.bodysuit, .dress, .sandals])
+    }
+
+    func testCoolDayPrefersALongBodyUnderABabysDress() {
+        let ines = Fixtures.ines
+        let items = [
+            Fixtures.item(.dress, owner: ines, size: 92, color: .pink, occasion: .dressy),
+            Fixtures.item(.bodysuit, owner: ines, size: 92, color: .white),
+            Fixtures.item(.longSleeveBodysuit, owner: ines, size: 92, color: .white),
+            Fixtures.item(.longSleeve, owner: ines, size: 92),
+            Fixtures.item(.sneakers, owner: ines, size: 23)
+        ]
+        let outfit = engine.propose(child: ines, items: items, weather: Fixtures.weather(morning: 9, high: 14), context: .celebration)
+        XCTAssertEqual(categories(outfit, items), [.longSleeveBodysuit, .dress, .sneakers])
+    }
+
+    func testABodyIsATopAndIsOfferedToBabiesOnly() {
+        let ines = Fixtures.ines
+        let items = [Fixtures.item(.longSleeveBodysuit, owner: ines, size: 92), Fixtures.item(.pants, owner: ines, size: 92)]
+        let outfit = engine.propose(child: ines, items: items, weather: Fixtures.weather(morning: 12, high: 16), context: .home)
+        XCTAssertEqual(categories(outfit, items), [.pants, .longSleeveBodysuit])
+        XCTAssertTrue(GarmentCategory.bodysuit.isOffered(forClothingSize: 98))
+        XCTAssertFalse(GarmentCategory.bodysuit.isOffered(forClothingSize: 104))
+        XCTAssertTrue(GarmentCategory.tshirt.isOffered(forClothingSize: 140))
+        XCTAssertEqual(CategoryGuess.ranked(fromLabels: [("onesie", 0.8)]), [.bodysuit])
+    }
+
     func testFreezingPrefersASousPullUnderThePullAndCountsSetsAsOnePiece() {
         let items = [Fixtures.item(.turtleneck, color: .white), Fixtures.item(.longSleeve), Fixtures.item(.sweater, color: .grey), Fixtures.item(.overalls, color: .denim)]
         let outfit = engine.propose(child: leo, items: items, weather: Fixtures.weather(morning: -2, high: 3), context: .home)

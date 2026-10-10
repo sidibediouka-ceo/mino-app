@@ -8,6 +8,8 @@ public enum GarmentCategory: String, CaseIterable, Codable, Sendable {
     case lightJacket, coat, raincoat
     case sneakers, boots, sandals
     case pajamas, coldAccessory
+    /// Baby clothes, offered up to 3 years (size 98).
+    case bodysuit, longSleeveBodysuit
 
     public var displayName: String {
         switch self {
@@ -30,6 +32,8 @@ public enum GarmentCategory: String, CaseIterable, Codable, Sendable {
         case .sandals: return "Sandales"
         case .pajamas: return "Pyjama"
         case .coldAccessory: return "Bonnet & gants"
+        case .bodysuit: return "Body manches courtes"
+        case .longSleeveBodysuit: return "Body manches longues"
         }
     }
 
@@ -55,6 +59,7 @@ public enum GarmentCategory: String, CaseIterable, Codable, Sendable {
         case .sandals: return "les sandales"
         case .pajamas: return "le pyjama"
         case .coldAccessory: return "le bonnet"
+        case .bodysuit, .longSleeveBodysuit: return "le body"
         }
     }
 
@@ -81,6 +86,7 @@ public enum GarmentCategory: String, CaseIterable, Codable, Sendable {
         case .sandals: noun = "tes sandales"
         case .pajamas: noun = "ton pyjama"
         case .coldAccessory: noun = "ton bonnet"
+        case .bodysuit, .longSleeveBodysuit: noun = "ton body"
         }
         return "Mets \(noun)"
     }
@@ -103,7 +109,7 @@ public enum GarmentCategory: String, CaseIterable, Codable, Sendable {
     /// Where the garment goes in a day outfit; pyjamas are never part of one.
     public var slot: OutfitSlot? {
         switch self {
-        case .tshirt, .longSleeve, .turtleneck: return .top
+        case .tshirt, .longSleeve, .turtleneck, .bodysuit, .longSleeveBodysuit: return .top
         case .pants, .overalls, .shorts: return .bottom
         case .dress, .playsuit: return .onePiece
         case .tights: return .legwear
@@ -113,6 +119,16 @@ public enum GarmentCategory: String, CaseIterable, Codable, Sendable {
         case .coldAccessory: return .accessory
         case .pajamas: return nil
         }
+    }
+
+    /// The largest size bodies are offered in: 3 ans.
+    public static let largestBodysuitSize = 98
+
+    public var isBodysuit: Bool { self == .bodysuit || self == .longSleeveBodysuit }
+
+    /// Whether a parent dressing a child of this size would look for this category.
+    public func isOffered(forClothingSize size: Int) -> Bool {
+        !isBodysuit || size <= Self.largestBodysuitSize
     }
 
     /// Whether the outfit engine should avoid repeating it on consecutive days (laundry).

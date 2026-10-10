@@ -12,18 +12,18 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 WIDTH, HEIGHT = 1206, 2622
-CREAM, INK, ACCENT = "#FAF5EC", "#2B3245", "#34587A"
+CREAM, INK, ACCENT, SOFT = "#FAF5EC", "#2B3245", "#34587A", "#737A87"
 FONT = Path(__file__).parent / "fonts" / "Nunito.ttf"
 
 CAPTIONS = {
     1: ("La tenue du jour,", "prête selon la météo"),
     2: ("Anticipez la taille d'après,", "sans mauvaise surprise"),
-    3: ("Ce soir,", "demain est déjà prêt"),
-    4: ("Toute une pile ajoutée", "en quelques photos"),
-    5: ("Son dressing,", "toujours à jour"),
+    3: ("Toute une pile ajoutée,", "jusqu'à 20 photos d'un coup"),
+    4: ("Son dressing,", "toujours à jour"),
+    5: ("Toutes les tenues,", "jour après jour"),
     6: ("Chaque vêtement,", "et sa prochaine vie"),
-    7: ("Il s'habille seul,", "pièce par pièce"),
-    8: ("Toutes les tenues,", "jour après jour"),
+    7: ("Ce soir,", "demain est déjà prêt"),
+    8: ("Il s'habille seul,", "pièce par pièce", "Aucun compte · Tout reste sur votre iPhone"),
 }
 
 
@@ -42,6 +42,12 @@ def frame(shot: Image.Image, lines) -> Image.Image:
         box = draw.textbbox((0, 0), text, font=face)
         draw.text(((WIDTH - (box[2] - box[0])) / 2, y), text, font=face, fill=color)
         y += 104
+    if len(lines) > 2:
+        # A quieter third line, for the promise that frames the whole app.
+        face = font(46, 600)
+        box = draw.textbbox((0, 0), lines[2], font=face)
+        draw.text(((WIDTH - (box[2] - box[0])) / 2, y + 14), lines[2], font=face, fill=SOFT)
+        y += 80
     # The screenshot, slightly smaller than the page, with rounded corners and a soft shadow.
     top = y + 70
     width = min(int(WIDTH * 0.84), int((HEIGHT - top - 90) * shot.width / shot.height))
