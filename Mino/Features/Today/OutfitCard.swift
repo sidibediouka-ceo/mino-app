@@ -87,7 +87,7 @@ struct OutfitCard: View {
                         Label("Habiller \(child.name)", systemImage: "sparkles")
                     }
                     .buttonStyle(PrimaryButtonStyle(color: color))
-                    Text("Touchez un vêtement pour en voir un autre.")
+                    Text("Toucher un vêtement pour voir d'autres options.")
                         .font(.caption)
                         .foregroundStyle(Theme.secondaryText)
                         .frame(maxWidth: .infinity)

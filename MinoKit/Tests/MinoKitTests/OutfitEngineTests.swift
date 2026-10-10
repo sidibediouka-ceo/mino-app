@@ -23,14 +23,14 @@ final class OutfitEngineTests: XCTestCase {
         let outfit = engine.propose(child: leo, items: items, weather: Fixtures.weather(morning: 7, high: 11, rain: 0.7), context: .school)
         XCTAssertEqual(categories(outfit, items), [.pants, .longSleeve, .sweater, .boots, .raincoat])
         XCTAssertTrue(outfit.gaps.isEmpty)
-        XCTAssertEqual(outfit.reasons.first, "Frais : 7° le matin, 11° l'après-midi")
-        XCTAssertEqual(outfit.reasons.last, "Pluie probable (70 %) : bottes et imperméable")
+        XCTAssertEqual(outfit.reasons, ["Frais : le pull", "Pluie prévue : les bottes et l'imperméable"])
     }
 
     func testFreezingDayAddsCoatAndAccessory() {
         let items = fullWardrobe
         let outfit = engine.propose(child: leo, items: items, weather: Fixtures.weather(morning: -1, high: 4), context: .school)
         XCTAssertEqual(categories(outfit, items), [.pants, .longSleeve, .sweater, .boots, .coat, .coldAccessory])
+        XCTAssertEqual(outfit.reasons, ["Très froid : le pull, le manteau et le bonnet"])
     }
 
     func testHotDayIsLight() {
@@ -117,7 +117,7 @@ final class OutfitEngineTests: XCTestCase {
     func testForgottenGarmentIsMentioned() {
         let forgotten = Fixtures.item(.dress, owner: Fixtures.ines, size: 92, lastWornAt: Fixtures.date(2026, 9, 20))
         let outfit = engine.propose(child: Fixtures.ines, items: [forgotten], weather: Fixtures.weather(morning: 20, high: 25), context: .home)
-        XCTAssertEqual(outfit.reasons, ["Belle journée : 20° le matin, 25° l'après-midi", "Journée à la maison : le confort d'abord"])
+        XCTAssertEqual(outfit.reasons, ["Belle journée : une tenue légère", "Journée à la maison : le confort d'abord"])
         let outing = engine.propose(child: Fixtures.ines, items: [forgotten], weather: Fixtures.weather(morning: 20, high: 25), context: .outing)
         XCTAssertEqual(outing.reasons.last, "La robe n'a pas été portée depuis 20 jours")
     }

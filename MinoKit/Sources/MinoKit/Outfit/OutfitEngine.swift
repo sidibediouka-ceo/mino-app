@@ -173,28 +173,26 @@ public struct OutfitEngine {
 
     // MARK: Explanations
 
+    /// Temperatures are shown once, above all outfits; reasons explain the choice instead.
     private func reasons(weather: DayForecast, context: DayContext, chosen: [WardrobeItem]) -> [String] {
         let feel: String
         switch weather.thermal {
         case .freezing: feel = "Très froid"
         case .cold: feel = "Frais"
         case .cool: feel = "Fraîcheur le matin"
-        case .mild: feel = "Doux"
+        case .mild: feel = "Temps doux"
         case .warm: feel = "Belle journée"
         case .hot: feel = "Chaud"
         }
-        var reasons = ["\(feel) : \(Int(weather.morningC.rounded()))° le matin, \(Int(weather.highC.rounded()))° l'après-midi"]
+        let warmth = chosen
+            .filter { [.sweater, .lightJacket, .coat, .coldAccessory].contains($0.category) }
+            .map(\.category.definiteName)
+        let light = weather.thermal >= .mild ? "une tenue légère" : "une tenue simple"
+        var reasons = ["\(feel) : \(warmth.isEmpty ? light : Self.list(warmth))"]
 
         if weather.isRainy {
-            let gear = chosen.compactMap { item -> String? in
-                switch item.category {
-                case .raincoat: return "imperméable"
-                case .boots: return "bottes"
-                default: return nil
-                }
-            }
-            let chance = "Pluie probable (\(Int((weather.precipitationChance * 100).rounded())) %)"
-            reasons.append(gear.isEmpty ? chance : "\(chance) : \(gear.joined(separator: " et "))")
+            let gear = chosen.filter { $0.category == .raincoat || $0.category == .boots }.map(\.category.definiteName)
+            reasons.append(gear.isEmpty ? "Pluie prévue" : "Pluie prévue : \(Self.list(gear))")
         }
 
         switch context {
@@ -215,5 +213,11 @@ public struct OutfitEngine {
             reasons.append("\(name.prefix(1).uppercased() + name.dropFirst()) n'a pas été \(agreement) depuis \(days) jours")
         }
         return Array(reasons.prefix(2))
+    }
+
+    /// "a", "a et b", "a, b et c".
+    private static func list(_ words: [String]) -> String {
+        guard let last = words.last else { return "" }
+        return words.count == 1 ? last : words.dropLast().joined(separator: ", ") + " et " + last
     }
 }

@@ -250,19 +250,25 @@ private struct DraftEditor: View {
                         occasion: $draft.occasion, brand: $draft.brand,
                         suggested: draft.suggestions, sizing: sizing
                     )
-                    Button("Retirer du lot", role: .destructive) { onDone(nil) }
                 }
                 .padding(20)
             }
             .background(Theme.background)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("OK") {
-                        draft.needsReview = false
-                        onDone(draft)
-                    }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Retirer du lot", role: .destructive) { onDone(nil) }
+                        .font(.subheadline)
                 }
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button("OK") {
+                    draft.needsReview = false
+                    onDone(draft)
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .padding(20)
+                .background(.bar)
             }
         }
     }

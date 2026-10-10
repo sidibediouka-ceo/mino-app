@@ -10,6 +10,16 @@ struct GarmentDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Child.createdAt) private var children: [Child]
     @State private var confirmingDeletion = false
+    @State private var lastChange: LifecycleChange?
+
+    /// What a lifecycle action replaced, so the confirmation can offer to undo it.
+    private struct LifecycleChange {
+        let id = UUID()
+        let message: String
+        let state: LifecycleState
+        let owner: Child?
+        let fitConfirmedAt: Double?
+    }
 
     var body: some View {
         ScrollView {
@@ -35,6 +45,8 @@ struct GarmentDetailView: View {
         .background(Theme.background)
         .navigationTitle(garment.category.displayName)
         .navigationBarTitleDisplayMode(.inline)
+        .overlay(alignment: .bottom) { confirmation }
+        .sensoryFeedback(.success, trigger: lastChange?.id)
         .confirmationDialog("Supprimer ce vêtement ?", isPresented: $confirmingDeletion, titleVisibility: .visible) {
             Button("Supprimer", role: .destructive) {
                 context.delete(garment)
@@ -96,7 +108,7 @@ struct GarmentDetailView: View {
                 .foregroundStyle(Theme.ink)
 
             if let recommendation {
-                Button { garment.apply(recommendation, children: children) } label: {
+                Button { apply(recommendation) } label: {
                     Label("Conseil : \(DestinationLabel.text(recommendation, children: children))", systemImage: DestinationLabel.symbol(recommendation))
                 }
                 .buttonStyle(PrimaryButtonStyle())
@@ -108,7 +120,9 @@ struct GarmentDetailView: View {
                     Label("Partager l'annonce", systemImage: "square.and.arrow.up")
                 }
                 .buttonStyle(PrimaryButtonStyle())
-                Button("Vendu", systemImage: "checkmark.seal") { garment.move(to: .sold, owner: nil) }
+                Button("Vendu", systemImage: "checkmark.seal") {
+                    change("Vendu ! Il reste visible dans les Archives.") { garment.move(to: .sold, owner: nil) }
+                }
                     .buttonStyle(SecondaryButtonStyle())
             }
 
@@ -123,13 +137,65 @@ struct GarmentDetailView: View {
             if destination == .sell && garment.state == .forSale { continue }
             if destination == .store && garment.state == .stored { continue }
             actions.append((DestinationLabel.text(destination, children: children), DestinationLabel.symbol(destination), {
-                garment.apply(destination, children: children)
+                apply(destination)
             }))
         }
         if garment.state != .keepsake {
-            actions.append(("Garder en souvenir", "heart.text.square", { garment.move(to: .keepsake, owner: nil) }))
+            actions.append(("Garder en souvenir", "heart.text.square", {
+                change("Gardé en souvenir. Il reste visible dans les Archives.") { garment.move(to: .keepsake, owner: nil) }
+            }))
         }
         return actions
+    }
+
+    // MARK: Confirmation
+
+    private func apply(_ destination: Destination) {
+        let message: String
+        switch destination {
+        case .sibling(let id, _):
+            message = "C'est fait : il est dans le dressing de \(children.first { $0.id == id }?.name ?? "")."
+        case .store: message = "Rangé dans les cartons de la famille."
+        case .donate: message = "Merci pour ce don ! Il reste visible dans les Archives."
+        case .sell: message = "En vente : l'annonce est prête à partager."
+        }
+        change(message) { garment.apply(destination, children: children) }
+    }
+
+    private func change(_ message: String, _ perform: () -> Void) {
+        let previous = LifecycleChange(message: message, state: garment.state, owner: garment.owner, fitConfirmedAt: garment.fitConfirmedAt)
+        perform()
+        withAnimation(.snappy) { lastChange = previous }
+    }
+
+    private func undo(_ change: LifecycleChange) {
+        garment.move(to: change.state, owner: change.owner)
+        garment.fitConfirmedAt = change.fitConfirmedAt
+        withAnimation(.snappy) { lastChange = nil }
+    }
+
+    @ViewBuilder
+    private var confirmation: some View {
+        if let lastChange {
+            HStack(spacing: 12) {
+                Image(systemName: "checkmark.circle.fill")
+                Text(lastChange.message)
+                    .font(.subheadline.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                Button("Annuler") { undo(lastChange) }
+                    .font(.subheadline.weight(.bold))
+            }
+            .foregroundStyle(Theme.background)
+            .padding(16)
+            .background(Theme.ink, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .padding(16)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .task(id: lastChange.id) {
+                try? await Task.sleep(for: .seconds(4))
+                withAnimation(.snappy) { self.lastChange = nil }
+            }
+        }
     }
 }
 
