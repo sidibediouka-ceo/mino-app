@@ -140,16 +140,7 @@ private struct JournalEntry: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(color)
             }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(plan.outfit.pieces, id: \.itemID) { piece in
-                        GarmentImage(photo: family.garment(piece.itemID)?.photo)
-                            .frame(width: 76, height: 76)
-                    }
-                }
-                .padding(.vertical, 6)
-                .padding(.horizontal, 2)
-            }
+            OutfitBoard(pieces: plan.outfit.pieces, family: family)
         }
         .padding(16)
         .background(color.opacity(0.13), in: RoundedRectangle(cornerRadius: 24, style: .continuous))

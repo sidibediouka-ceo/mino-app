@@ -30,6 +30,12 @@ struct OutfitComposerView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    if !selection.isEmpty {
+                        OutfitBoard(pieces: selection.map { OutfitPiece(slot: $0.key, itemID: $0.value) }, family: family)
+                            .padding(16)
+                            .background(color.opacity(0.13), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                            .animation(.snappy, value: selection)
+                    }
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Pour quoi ? (facultatif)")
                             .font(.system(.subheadline, design: .rounded).weight(.semibold))
