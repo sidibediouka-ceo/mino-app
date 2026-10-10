@@ -72,7 +72,7 @@ Le produit repose sur une entrée et trois boucles. Chaque boucle a un budget d'
 ### Boucle 1 : « Le soir, c'est prêt » (quotidienne)
 - **19 h 30**, une notification opt-in : « Demain 8° et pluie. Les tenues de Léo et Inès sont prêtes. »
 - Deux onglets, **Aujourd'hui** et **Demain** ; à partir de 16 h, l'écran s'ouvre sur demain. La tenue de demain ne répète jamais celle prévue aujourd'hui.
-- Le **Carnet des tenues**, un calendrier privé, garde la trace de ce que chaque enfant a porté.
+- Le **Carnet des tenues**, un calendrier privé, garde la trace de ce que chaque enfant a porté et permet de **préparer une tenue à l'avance** pour une date (« Soirée chez Lina »). Mino propose, le parent ajuste, et le jour J l'accueil affiche cette tenue telle quelle.
 - Pour chaque enfant : une tenue complète et justifiée. Toucher une pièce la remplace par la meilleure alternative. Le contexte (École, Sport, Sortie, Fête, Maison) s'ajuste en un geste.
 - **Aucune confirmation à faire** : une tenue planifiée est considérée comme portée une fois la journée passée. Mino met à jour la rotation et apprend des échanges de pièces faits par le parent.
 - **Mode enfant** au matin : les pièces en grand, dans l'ordre d'habillage, que l'enfant coche lui-même. Ce mode est inspiré des crèches japonaises. Il transforme une corvée en autonomie, et c'est un moment que les enfants réclament.

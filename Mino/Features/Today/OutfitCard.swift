@@ -31,6 +31,12 @@ struct OutfitCard: View {
                 contextMenu
             }
 
+            if !plan.note.isEmpty {
+                Label(plan.note, systemImage: "calendar.badge.checkmark")
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .foregroundStyle(color)
+            }
+
             if outfit.pieces.isEmpty {
                 emptyWardrobe
             } else {

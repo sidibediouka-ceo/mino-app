@@ -17,6 +17,8 @@ final class PlannedOutfit {
     var gapsRaw: [String] = []
     var reasons: [String] = []
     var confirmedAt: Date?
+    /// What the day is for, when the parent prepared the outfit ahead ("Soirée chez Lina").
+    var note: String = ""
     var child: Child?
 
     init(day: Date) {
@@ -42,6 +44,9 @@ final class PlannedOutfit {
             reasons = newValue.reasons
         }
     }
+
+    /// Chosen by the parent rather than proposed by Mino: kept exactly as it is.
+    var isPreparedByParent: Bool { proposedRaw.isEmpty && !piecesRaw.isEmpty }
 
     var proposedPieces: [OutfitPiece] {
         proposedRaw.compactMap(OutfitPiece.init(rawValue:))

@@ -18,6 +18,7 @@ struct DayPlanner {
     ///
     /// A plan the parent has not touched follows the latest weather and wardrobe; a plan they
     /// adjusted is kept as they left it, unless one of its garments is no longer available.
+    /// An outfit prepared ahead from the journal is never replaced.
     func ensurePlans(for days: [Date], forecast: (Date) -> DayForecast) {
         // A past day's outfit is assumed worn: parents never have to confirm anything.
         let today = calendar.startOfDay(for: .now)
@@ -28,9 +29,14 @@ struct DayPlanner {
             for child in family.children {
                 if let plan = (child.plans ?? []).first(where: { calendar.isDate($0.day, inSameDayAs: day) }) {
                     guard plan.confirmedAt == nil else { continue }
-                    let untouched = plan.piecesRaw == plan.proposedRaw
-                    let missingGarment = plan.outfit.pieces.contains { !isAvailable($0.itemID, for: child) }
-                    if untouched || missingGarment {
+                    let outfit = plan.outfit
+                    let available = outfit.pieces.filter { isAvailable($0.itemID, for: child) }
+                    if plan.isPreparedByParent {
+                        // The parent's choice stands; only a garment that left the dressing is dropped.
+                        if available.count != outfit.pieces.count {
+                            plan.outfit = Outfit(pieces: available, gaps: [], reasons: [])
+                        }
+                    } else if plan.piecesRaw == plan.proposedRaw || available.count != outfit.pieces.count {
                         propose(plan, for: child, forecast: forecast(day))
                     }
                 } else {
@@ -59,11 +65,13 @@ struct DayPlanner {
         plan.outfit = outfit.replacing(slot, with: next)
     }
 
-    /// A new context for the day; Mino remembers it for this weekday.
+    /// A new context for the day; Mino remembers it for this weekday. An outfit the parent
+    /// prepared for a special day keeps its pieces and teaches nothing about the routine.
     func setContext(_ dayContext: DayContext, for plan: PlannedOutfit, forecast: DayForecast) {
         guard let child = plan.child else { return }
-        child.routine = child.routine.learning(dayContext, on: plan.day, calendar: calendar)
         plan.context = dayContext
+        guard !plan.isPreparedByParent else { return }
+        child.routine = child.routine.learning(dayContext, on: plan.day, calendar: calendar)
         propose(plan, for: child, forecast: forecast)
     }
 
