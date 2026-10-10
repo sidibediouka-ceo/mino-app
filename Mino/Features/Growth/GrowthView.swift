@@ -52,6 +52,9 @@ struct GrowthView: View {
                         }
                         ToiseCard(child: child, color: color) { measuring = child }
                     }
+                    #if DEBUG
+                    DemoScenariosCard()
+                    #endif
                 }
                 .padding(20)
             }
