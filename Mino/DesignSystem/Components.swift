@@ -37,6 +37,7 @@ struct SecondaryButtonStyle: ButtonStyle {
             .padding(.horizontal, 16)
             .foregroundStyle(Theme.ink)
             .background(Theme.chip, in: Capsule())
+            .overlay(Capsule().strokeBorder(Theme.outline, lineWidth: 1))
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }

@@ -11,6 +11,8 @@ enum Theme {
     static let secondaryText = Color(light: 0x737A87, dark: 0xA7ACB6)
     /// Neutral fill for chips and secondary buttons.
     static let chip = Color(light: 0xF0E8DC, dark: 0x30333A)
+    /// The fine outline that makes a secondary action read as a button on a tinted card.
+    static let outline = Color(light: 0x2B3245, dark: 0xF2EFE8).opacity(0.18)
     static let accent = Color(light: 0x34587A, dark: 0x8DB4D8)
     static let onAccent = Color(light: 0xFFFFFF, dark: 0x17181C)
 
