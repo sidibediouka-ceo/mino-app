@@ -19,6 +19,8 @@ final class PlannedOutfit {
     var confirmedAt: Date?
     /// What the day is for, when the parent prepared the outfit ahead ("Soirée chez Lina").
     var note: String = ""
+    /// The moment captured: the child wearing the outfit. Kept on this iPhone only.
+    @Attribute(.externalStorage) var photo: Data?
     var child: Child?
 
     init(day: Date) {
