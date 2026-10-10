@@ -3,7 +3,8 @@
 Data
 - The Clothing Dataset by Alexey Grigorev (CC0 1.0, public domain):
   https://github.com/alexeygrigorev/clothing-dataset, about 5,000 photos.
-- Mino's own catalogue photos for tights, which that dataset lacks.
+- Mino's own catalogue photos (children's clothes on white), listed in a CSV of `path,class`:
+  the closest to what parents photograph, and the only tights.
 
 Model: MobileNetV3-Large pre-trained on ImageNet (timm, Apache 2.0), fine-tuned on the
 classes below. The classes are visual families; MinoKit maps them to garment categories and
@@ -11,7 +12,9 @@ combines them with the outline (GarmentShape) and Apple's classifier.
 
 Usage:
     python3 design/classifier/train.py --dataset <clothing-dataset> --weights <mobilenetv3.pth> \
-        --tights <folder of tights photos> --out Mino/Resources/MinoGarmentClassifier.mlmodel
+        --photos <photos.csv> --out Mino/Resources/MinoGarmentClassifier.mlmodel
+    Add --holdout <photos.csv> to measure on catalogue photos left out of training, and
+    --init <model.pth> to start from an earlier run.
 """
 import argparse
 import csv
@@ -39,14 +42,16 @@ MEAN, STD = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
 
 
 def on_white(path):
-    """Mino classifies cut-outs on white: flatten transparent photos the same way."""
+    """Mino classifies cut-outs on a white sheet with a margin: prepare transparent photos the same way."""
     image = Image.open(path)
-    if image.mode in ("RGBA", "LA", "P"):
-        image = image.convert("RGBA")
-        sheet = Image.new("RGB", image.size, "white")
-        sheet.paste(image, mask=image.getchannel("A"))
-        return sheet
-    return image.convert("RGB")
+    if image.mode not in ("RGBA", "LA", "P"):
+        return image.convert("RGB")
+    image = image.convert("RGBA")
+    image = image.crop(image.getchannel("A").getbbox())
+    side = int(max(image.size) * 1.2)
+    sheet = Image.new("RGB", (side, side), "white")
+    sheet.paste(image, ((side - image.width) // 2, (side - image.height) // 2), image.getchannel("A"))
+    return sheet
 
 
 class Photos(Dataset):
@@ -61,7 +66,7 @@ class Photos(Dataset):
         return self.transform(on_white(path)), label
 
 
-def load_items(dataset, tights):
+def load_items(dataset):
     items = []
     with open(Path(dataset) / "images.csv") as file:
         for row in csv.DictReader(file):
@@ -69,15 +74,21 @@ def load_items(dataset, tights):
             path = Path(dataset) / "images" / f"{row['image']}.jpg"
             if label and path.exists():
                 items.append((path, CLASSES.index(label)))
-    tight_items = [(path, CLASSES.index("tights")) for path in sorted(Path(tights).glob("*.png"))]
-    return items, tight_items
+    return items
+
+
+def load_photos(listing):
+    with open(listing) as file:
+        return [(Path(row[0]), CLASSES.index(row[1])) for row in csv.reader(file)]
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", required=True)
     parser.add_argument("--weights", required=True)
-    parser.add_argument("--tights", required=True)
+    parser.add_argument("--photos", required=True)
+    parser.add_argument("--holdout")
+    parser.add_argument("--init")
     parser.add_argument("--out", required=True)
     parser.add_argument("--epochs", type=int, default=8)
     args = parser.parse_args()
@@ -85,13 +96,14 @@ def main():
     torch.manual_seed(7)
     torch.set_num_threads(4)
 
-    items, tight_items = load_items(args.dataset, args.tights)
+    items = load_items(args.dataset)
     random.shuffle(items)
     cut = int(len(items) * 0.85)
     train, test = items[:cut], items[cut:]
-    # Half of the tights train, the other half is kept to check the result.
-    train += tight_items[::2]
-    test += tight_items[1::2]
+    # Catalogue photos are few but closest to the app: they weigh like a whole class each.
+    photos = load_photos(args.photos)
+    train += photos * 4
+    holdout = load_photos(args.holdout) if args.holdout else []
     print("train", Counter(CLASSES[label] for _, label in train))
     print("test", Counter(CLASSES[label] for _, label in test))
 
@@ -105,16 +117,20 @@ def main():
     plain = transforms.Compose([
         transforms.Resize((SIZE, SIZE)), transforms.ToTensor(), transforms.Normalize(MEAN, STD),
     ])
+    # The app pads each cut-out on a white square sheet before classifying it.
     # Rare classes are drawn as often as frequent ones.
     counts = Counter(label for _, label in train)
     weights = [1 / counts[label] for _, label in train]
     sampler = WeightedRandomSampler(weights, num_samples=len(train), replacement=True)
     train_loader = DataLoader(Photos(train, augment), batch_size=32, sampler=sampler, num_workers=3)
     test_loader = DataLoader(Photos(test, plain), batch_size=64, num_workers=3)
+    holdout_loader = DataLoader(Photos(holdout, plain), batch_size=64, num_workers=3) if holdout else None
 
     model = timm.create_model("mobilenetv3_large_100", pretrained=False)
     model.load_state_dict(torch.load(args.weights, map_location="cpu"))
     model.reset_classifier(len(CLASSES))
+    if args.init:
+        model.load_state_dict(torch.load(args.init, map_location="cpu"))
     head = list(model.get_classifier().parameters())
     optimizer = torch.optim.AdamW([
         {"params": [p for p in model.parameters() if all(p is not h for h in head)], "lr": 3e-4},
@@ -134,6 +150,9 @@ def main():
                 print(f"epoch {epoch} step {step} loss {loss.item():.3f}", flush=True)
         scheduler.step()
         evaluate(model, test_loader)
+        if holdout_loader:
+            print("catalogue photos:", end=" ")
+            evaluate(model, holdout_loader)
 
     torch.save(model.state_dict(), Path(args.out).with_suffix(".pth"))
     export(model, args.out)
