@@ -38,8 +38,8 @@ LE CARNET DES TENUES
 • Retrouvez toutes les tenues portées, jour après jour, et gardez la photo de celles que vous aimez
 
 VOTRE VIE PRIVÉE, PAR CONCEPTION
-• Aucun compte, aucune publicité, aucun traceur
-• Toutes vos données et photos restent sur votre iPhone, y compris la reconnaissance des vêtements
+• Aucun compte, aucune publicité, aucun pistage publicitaire
+• Vos enfants, vos vêtements et vos photos restent sur votre iPhone, y compris la reconnaissance des vêtements
 • Mino ne demande que l'âge de vos enfants : ni date de naissance ni sexe, et le prénom est facultatif
 
 Mino ne se contente pas de ranger des vêtements : il vous aide à prendre les bonnes décisions au bon moment, sans avoir à tout garder en tête.
