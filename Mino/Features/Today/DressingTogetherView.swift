@@ -4,6 +4,7 @@ import SwiftUI
 /// they put it on, and ticks it off. Getting dressed becomes their own little achievement.
 struct DressingTogetherView: View {
     let childName: String
+    let color: Color
     let garments: [Garment]
     let onFinish: () -> Void
 
@@ -29,11 +30,11 @@ struct DressingTogetherView: View {
                 VStack(spacing: 8) {
                     Image(systemName: isFinished ? "star.fill" : "sparkles")
                         .font(.system(size: 44))
-                        .foregroundStyle(Theme.terracotta)
+                        .foregroundStyle(color)
                         .symbolEffect(.bounce, value: isFinished)
                     Text(isFinished ? "Bravo \(childName) !" : "À toi, \(childName) !")
                         .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundStyle(Theme.forest)
+                        .foregroundStyle(Theme.ink)
                         .multilineTextAlignment(.center)
                 }
 
@@ -48,7 +49,7 @@ struct DressingTogetherView: View {
                                     Spacer()
                                     Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
                                         .font(.system(size: 48))
-                                        .foregroundStyle(isDone ? Theme.forest : Theme.sage)
+                                        .foregroundStyle(isDone ? color : Theme.secondaryText.opacity(0.5))
                                 }
                                 .minoCard(padding: 12)
                                 .opacity(isDone ? 0.6 : 1)
@@ -65,7 +66,7 @@ struct DressingTogetherView: View {
                         onFinish()
                         dismiss()
                     }
-                    .buttonStyle(PrimaryButtonStyle())
+                    .buttonStyle(PrimaryButtonStyle(color: color))
                     .transition(.scale.combined(with: .opacity))
                 }
             }

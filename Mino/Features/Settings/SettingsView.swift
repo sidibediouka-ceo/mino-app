@@ -18,8 +18,8 @@ struct SettingsView: View {
                     ForEach(children) { child in
                         Button { editing = child } label: {
                             HStack(spacing: 12) {
-                                ChildAvatar(name: child.name, size: 32)
-                                Text(child.name).foregroundStyle(Theme.forest)
+                                ChildAvatar(name: child.name, color: children.color(of: child), size: 32)
+                                Text(child.name).foregroundStyle(Theme.ink)
                                 Spacer()
                                 Text(Formatting.age(of: child.birthDate)).foregroundStyle(Theme.secondaryText)
                             }

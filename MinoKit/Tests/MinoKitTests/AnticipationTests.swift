@@ -66,28 +66,29 @@ final class AnticipationTests: XCTestCase {
 }
 
 final class BriefingTests: XCTestCase {
-    func testPrioritisesAndLimits() {
+    func testSortThenRetrieveThenMeasure() {
         let leo = Fixtures.leo
         let outgrown = Fixtures.item(.pants, size: 92)
-        let items = [outgrown] + (0..<8).map { _ in Fixtures.item(.tshirt) }
-        let briefing = Briefing.compose(family: [leo, Fixtures.ines], items: items, needs: [], on: Fixtures.today)
-        XCTAssertEqual(briefing, [.addGarments(childID: Fixtures.ines.id), .sort(childID: leo.id, itemIDs: [outgrown.id])])
-        XCTAssertEqual(Briefing.compose(family: [leo, Fixtures.ines], items: items, needs: [], on: Fixtures.today, limit: 1).count, 1)
+        let boxed = Fixtures.item(.coat, owner: nil, size: 110, state: .stored)
+        let need = Need(childID: leo.id, group: .warmOuterwear, season: .winter, neededBy: Fixtures.today, size: 110, missing: 1, familyStock: [boxed.id])
+        let unmeasured = ChildProfile(id: UUID(), name: "A", birthDate: Fixtures.date(2022, 1, 1), sex: .girl, records: [])
+        let briefing = Briefing.compose(family: [unmeasured, leo], items: [outgrown, boxed], needs: [need], on: Fixtures.today)
+        XCTAssertEqual(briefing, [.sort(childID: leo.id, itemIDs: [outgrown.id]), .retrieve(need), .measure(childID: unmeasured.id)])
+        XCTAssertEqual(briefing.map(\.childID), [leo.id, leo.id, unmeasured.id])
     }
 
-    func testMeasureIsSuggestedWhenNoRecentMeasurement() {
-        let child = ChildProfile(id: UUID(), name: "A", birthDate: Fixtures.date(2022, 1, 1), sex: .girl, records: [])
-        let items = (0..<8).map { _ in WardrobeItem(ownerID: child.id, category: .tshirt, color: .white, size: 140) }
-        XCTAssertEqual(Briefing.compose(family: [child], items: items, needs: [], on: Fixtures.today), [.measure(childID: child.id)])
+    func testNothingToDoForAMeasuredChildWithAFittingWardrobe() {
+        let items = (0..<8).map { _ in Fixtures.item(.tshirt) }
+        XCTAssertTrue(Briefing.compose(family: [Fixtures.leo], items: items, needs: [], on: Fixtures.today).isEmpty)
     }
 }
 
 final class RecognitionAndListingTests: XCTestCase {
     func testCategoryGuess() {
-        XCTAssertEqual(CategoryGuess.category(fromLabels: [("raincoat", 0.6), ("coat", 0.3)]), .raincoat)
-        XCTAssertEqual(CategoryGuess.category(fromLabels: [("t_shirt", 0.5), ("shirt", 0.2)]), .tshirt)
-        XCTAssertEqual(CategoryGuess.category(fromLabels: [("jeans", 0.4)]), .pants)
-        XCTAssertNil(CategoryGuess.category(fromLabels: [("dog", 0.9), ("dress", 0.05)]))
+        XCTAssertEqual(CategoryGuess.ranked(fromLabels: [("raincoat", 0.6), ("coat", 0.3)]), [.raincoat, .coat])
+        XCTAssertEqual(CategoryGuess.ranked(fromLabels: [("t_shirt", 0.5), ("shirt", 0.2)]), [.tshirt, .longSleeve])
+        XCTAssertEqual(CategoryGuess.ranked(fromLabels: [("jeans", 0.4)]), [.pants])
+        XCTAssertEqual(CategoryGuess.ranked(fromLabels: [("dog", 0.9), ("dress", 0.05)]), [])
     }
 
     func testDominantColour() {

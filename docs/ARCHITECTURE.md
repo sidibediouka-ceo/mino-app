@@ -33,7 +33,7 @@
 │ Weather     ressenti de la journée d'un enfant, estimation de saison       │
 │ Outfit      moteur de tenue, routine apprise, apprentissage des préférences│
 │ Anticipation besoins saisonniers, cartons familiaux, conseil de seconde vie│
-│ Briefing    les 3 actions les plus utiles du jour                          │
+│ Briefing    ce qui mérite un geste : trier, récupérer, mesurer             │
 │ Listing     annonce de revente factuelle                                   │
 │ Recognition labels Vision → catégorie, pixels → couleur nommée             │
 └────────────────────────────────────────────────────────────────────────────┘
@@ -79,8 +79,8 @@ L'ordre est fixe : d'abord le frère ou la sœur à qui le vêtement va maintena
 
 - **Aujourd'hui** : `TodayView` construit un `FamilySnapshot`. Une tâche (`.task(id:)`), relancée dès que la météo, le jour ou la garde-robe change, rafraîchit la météo puis appelle `DayPlanner.ensurePlans`. Celui-ci crée ou recalcule un `PlannedOutfit` par enfant. Le plan est **stable** : il n'est recalculé que si la vraie météo remplace une estimation, si une pièce n'est plus disponible ou si un manque peut désormais être comblé.
 - **Échanger une pièce** : `DayPlanner.swap` parcourt les alternatives sans revenir en arrière (les pièces écartées dans la journée sont mémorisées).
-- **Confirmer la tenue** : `DayPlanner.confirm` met à jour la rotation (`lastWornAt`, `wearCount`) et les préférences.
-- **Ajouter des vêtements** : `GarmentAnalyzer` détoure le vêtement (`VNGenerateForegroundInstanceMaskRequest`), classe l'image (`VNClassifyImageRequest` puis `CategoryGuess`), en déduit la couleur dominante (`GarmentColor.dominant`) et lit le texte visible (`VNRecognizeTextRequest` puis `SizeLabelParser`). Le parent valide un brouillon pré-rempli.
+- **Tenue portée** : `DayPlanner.confirm` met à jour la rotation (`lastWornAt`, `wearCount`) et les préférences. Il est appelé à la fin du Mode enfant, et automatiquement pour toute tenue d'un jour passé : le parent n'a jamais rien à confirmer.
+- **Ajouter des vêtements (validation par exception)** : tout le lot s'affiche en grille, avec une taille commune au lot ; seuls les vêtements non reconnus sont signalés « À vérifier ». `GarmentAnalyzer` détoure le vêtement (`VNGenerateForegroundInstanceMaskRequest`), classe l'image (`VNClassifyImageRequest` puis `CategoryGuess.ranked`, dont les trois premières catégories sont proposées en tête), en déduit la couleur dominante (`GarmentColor.dominant`) et lit le texte visible (`VNRecognizeTextRequest` puis `SizeLabelParser`). Le parent valide un brouillon pré-rempli.
 
 ## Respect de l'utilisateur
 

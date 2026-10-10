@@ -40,7 +40,7 @@ private struct WelcomeView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Mino")
                         .font(.system(size: 44, weight: .bold, design: .rounded))
-                        .foregroundStyle(Theme.forest)
+                        .foregroundStyle(Theme.ink)
                     Text("La garde-robe de vos enfants, qui grandit avec eux.")
                         .font(.title3)
                         .foregroundStyle(Theme.secondaryText)
@@ -77,10 +77,10 @@ private struct Promise: View {
         HStack(alignment: .top, spacing: 16) {
             Image(systemName: symbol)
                 .font(.title2)
-                .foregroundStyle(Theme.sage)
+                .foregroundStyle(Theme.accent)
                 .frame(width: 32)
             VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.headline).foregroundStyle(Theme.forest)
+                Text(title).font(.headline).foregroundStyle(Theme.ink)
                 Text(message).font(.subheadline).foregroundStyle(Theme.secondaryText)
             }
         }

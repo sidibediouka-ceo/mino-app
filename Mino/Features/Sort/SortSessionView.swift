@@ -45,7 +45,7 @@ struct SortSessionView: View {
                     .frame(height: 260)
                 Text(garment.summary)
                     .font(.headline)
-                    .foregroundStyle(Theme.forest)
+                    .foregroundStyle(Theme.ink)
                 if let owner = garment.owner {
                     Text(measurementHint(for: owner, kind: garment.category.sizeKind))
                         .font(.subheadline)
@@ -53,7 +53,7 @@ struct SortSessionView: View {
                 }
                 Label("Conseil : \(DestinationLabel.text(recommendation, children: children))", systemImage: DestinationLabel.symbol(recommendation))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.forest)
+                    .foregroundStyle(Theme.ink)
             }
             .minoCard(padding: 20)
             .offset(x: dragOffset.width)
@@ -116,10 +116,10 @@ struct SortSessionView: View {
         return VStack(spacing: 16) {
             Image(systemName: "sparkles")
                 .font(.system(size: 44))
-                .foregroundStyle(Theme.terracotta)
+                .foregroundStyle(Theme.accent)
             Text("Le dressing respire")
                 .font(.title2.weight(.bold))
-                .foregroundStyle(Theme.forest)
+                .foregroundStyle(Theme.ink)
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(ordered, id: \.self) { label in
                     Text("\(label) : \(counts[label] ?? 0)")

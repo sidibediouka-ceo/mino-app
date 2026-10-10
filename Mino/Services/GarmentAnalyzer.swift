@@ -7,7 +7,8 @@ import Vision
 struct GarmentAnalysis: Sendable {
     /// Background-free PNG when the subject could be lifted, the plain photo otherwise.
     let photo: Data
-    let category: GarmentCategory?
+    /// Most likely categories first; empty when Vision has no idea.
+    let categories: [GarmentCategory]
     let color: GarmentColor?
     /// Text read on the photo (a visible label often carries the size).
     let texts: [String]
@@ -18,13 +19,13 @@ enum GarmentAnalyzer {
         await Task.detached(priority: .userInitiated) {
             let upright = redraw(image, maxDimension: 1024)
             guard let cgImage = upright.cgImage else {
-                return GarmentAnalysis(photo: upright.pngData() ?? Data(), category: nil, color: nil, texts: [])
+                return GarmentAnalysis(photo: upright.pngData() ?? Data(), categories: [], color: nil, texts: [])
             }
             let cutout = liftSubject(from: cgImage)
             let stored = redraw(UIImage(cgImage: cutout ?? cgImage), maxDimension: 600)
             return GarmentAnalysis(
                 photo: stored.pngData() ?? Data(),
-                category: classify(cgImage),
+                categories: classify(cgImage),
                 color: dominantColor(of: cutout ?? cgImage, isCutout: cutout != nil),
                 texts: recognizeText(in: cgImage)
             )
@@ -53,11 +54,11 @@ enum GarmentAnalyzer {
         return CIContext().createCGImage(ciImage, from: ciImage.extent)
     }
 
-    private static func classify(_ image: CGImage) -> GarmentCategory? {
+    private static func classify(_ image: CGImage) -> [GarmentCategory] {
         let request = VNClassifyImageRequest()
-        guard (try? VNImageRequestHandler(cgImage: image).perform([request])) != nil else { return nil }
+        guard (try? VNImageRequestHandler(cgImage: image).perform([request])) != nil else { return [] }
         let labels = (request.results ?? []).prefix(20).map { (identifier: $0.identifier, confidence: $0.confidence) }
-        return CategoryGuess.category(fromLabels: Array(labels))
+        return CategoryGuess.ranked(fromLabels: Array(labels))
     }
 
     private static func recognizeText(in image: CGImage) -> [String] {

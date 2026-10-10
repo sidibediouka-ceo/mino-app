@@ -11,7 +11,7 @@ struct MinoApp: App {
             RootView()
                 .environment(weather)
                 .environment(router)
-                .tint(Theme.forest)
+                .tint(Theme.accent)
         }
         .modelContainer(for: [Child.self, GrowthEntry.self, Garment.self, PlannedOutfit.self])
     }

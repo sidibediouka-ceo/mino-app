@@ -21,7 +21,7 @@ struct GarmentDetailView: View {
 
                 GarmentFields(
                     category: $garment.category, color: $garment.color, size: $garment.size,
-                    occasion: $garment.occasion, brand: $garment.brand, sizing: garment.owner?.profile
+                    occasion: $garment.occasion, brand: $garment.brand, suggested: [], sizing: garment.owner?.profile
                 )
                 .minoCard()
 
@@ -51,7 +51,7 @@ struct GarmentDetailView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(statusTitle)
                 .font(.headline)
-                .foregroundStyle(Theme.forest)
+                .foregroundStyle(Theme.ink)
             if garment.wearCount > 0, let lastWornAt = garment.lastWornAt {
                 Text("Porté \(Formatting.count(garment.wearCount, "fois", "fois")), dernièrement le \(Formatting.shortDate(lastWornAt))")
                     .font(.subheadline)
@@ -93,7 +93,7 @@ struct GarmentDetailView: View {
         return VStack(alignment: .leading, spacing: 12) {
             Text("Sa prochaine vie")
                 .font(.headline)
-                .foregroundStyle(Theme.forest)
+                .foregroundStyle(Theme.ink)
 
             if let recommendation {
                 Button { garment.apply(recommendation, children: children) } label: {

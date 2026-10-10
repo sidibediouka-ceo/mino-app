@@ -13,6 +13,11 @@ struct DayPlanner {
 
     /// Makes sure every child has an up-to-date plan for `day`.
     func ensurePlans(for day: Date, forecast: DayForecast) {
+        // A past day's outfit is assumed worn: parents swap what changed, they never have to confirm.
+        let today = calendar.startOfDay(for: .now)
+        for plan in family.children.flatMap({ $0.plans ?? [] }) where plan.confirmedAt == nil && plan.day < today {
+            confirm(plan)
+        }
         for child in family.children {
             if let plan = (child.plans ?? []).first(where: { calendar.isDate($0.day, inSameDayAs: day) }) {
                 guard plan.confirmedAt == nil else { continue }
@@ -56,7 +61,8 @@ struct DayPlanner {
         propose(plan, for: child, forecast: forecast)
     }
 
-    /// The child wore it: update rotation and learn from the parent's swaps.
+    /// The child wore it (Mode enfant finished, or the day is over): update rotation and learn
+    /// from the parent's swaps.
     func confirm(_ plan: PlannedOutfit) {
         guard plan.confirmedAt == nil else { return }
         let worn = plan.outfit.pieces

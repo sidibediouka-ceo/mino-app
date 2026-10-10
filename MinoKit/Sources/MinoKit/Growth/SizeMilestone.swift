@@ -3,7 +3,6 @@ import Foundation
 /// "Passes into 110 around mid-February (between January and March)."
 public struct SizeMilestone: Equatable, Sendable {
     public let size: Int
-    public let kind: SizeKind
     public let when: DateEstimate
 }
 
@@ -23,10 +22,10 @@ extension ChildProfile {
         case .clothing:
             guard let next = SizeChart.nextClothingSize(after: current),
                   let when = dateReaching(heightCM: Double(current) + 2.01, from: date) else { return nil }
-            return SizeMilestone(size: next, kind: kind, when: when)
+            return SizeMilestone(size: next, when: when)
         case .shoes:
             guard let when = dateReaching(shoeSize: Double(current) + 0.01, from: date) else { return nil }
-            return SizeMilestone(size: current + 1, kind: kind, when: when)
+            return SizeMilestone(size: current + 1, when: when)
         }
     }
 }

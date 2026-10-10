@@ -45,7 +45,7 @@ struct WardrobeView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(Formatting.count(outgrown.count, "vêtement trop petit", "vêtements trop petits"))
                                     .font(.headline)
-                                    .foregroundStyle(Theme.forest)
+                                    .foregroundStyle(Theme.ink)
                                 Text("Une minute pour leur trouver une suite.")
                                     .font(.subheadline)
                                     .foregroundStyle(Theme.secondaryText)
@@ -59,7 +59,12 @@ struct WardrobeView: View {
                     }
 
                     if visible.isEmpty {
-                        EmptyStateView(symbol: "hanger", title: emptyTitle, message: emptyMessage)
+                        EmptyStateView(symbol: "hanger", title: emptyTitle, message: emptyMessage) {
+                            if currentScope.acceptsNewGarments && filter == .all {
+                                Button("Ajouter des vêtements", systemImage: "camera.fill") { adding = true }
+                                    .buttonStyle(PrimaryButtonStyle())
+                            }
+                        }
                     } else {
                         grid(visible, profile: profile)
                     }
@@ -67,15 +72,24 @@ struct WardrobeView: View {
                     secondLife
                 }
                 .padding(20)
+                .padding(.bottom, 72)
             }
             .background(Theme.background)
             .navigationTitle("Dressing")
             .navigationDestination(for: Garment.self) { GarmentDetailView(garment: $0) }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { adding = true } label: { Image(systemName: "plus") }
-                        .accessibilityLabel("Ajouter des vêtements")
-                        .disabled(!currentScope.acceptsNewGarments)
+            .overlay(alignment: .bottomTrailing) {
+                if currentScope.acceptsNewGarments && !visible.isEmpty {
+                    Button { adding = true } label: {
+                        Label("Ajouter", systemImage: "plus")
+                            .font(.system(.headline, design: .rounded))
+                            .padding(.vertical, 14)
+                            .padding(.horizontal, 22)
+                            .foregroundStyle(Theme.onAccent)
+                            .background(Theme.accent, in: Capsule())
+                            .shadow(color: Theme.accent.opacity(0.35), radius: 12, y: 6)
+                    }
+                    .padding(20)
+                    .accessibilityLabel("Ajouter des vêtements")
                 }
             }
             .sheet(isPresented: $adding) {
@@ -94,7 +108,7 @@ struct WardrobeView: View {
     private var scopes: [WardrobeScope] {
         var scopes = children.map { WardrobeScope.child($0.id) } + [.boxes]
         if garments.contains(where: { $0.state == .forSale }) { scopes.append(.forSale) }
-        if garments.contains(where: { $0.state == .keepsake }) { scopes.append(.keepsakes) }
+        if garments.contains(where: { WardrobeScope.archive.contains($0) }) { scopes.append(.archive) }
         return scopes
     }
 
@@ -103,7 +117,7 @@ struct WardrobeView: View {
         case .child(let id): return children.first { $0.id == id }?.name ?? ""
         case .boxes: return "Cartons"
         case .forSale: return "À vendre"
-        case .keepsakes: return "Souvenirs"
+        case .archive: return "Archives"
         }
     }
 
@@ -112,7 +126,7 @@ struct WardrobeView: View {
         case .child: return filter == .all ? "Le dressing est vide" : "Rien ici"
         case .boxes: return "Aucun carton"
         case .forSale: return "Rien à vendre"
-        case .keepsakes: return "Aucun souvenir"
+        case .archive: return "Aucune archive"
         }
     }
 
@@ -121,7 +135,7 @@ struct WardrobeView: View {
         case .child: return filter == .all ? "Touchez + pour ajouter quelques photos." : "Aucun vêtement ne correspond à ce filtre."
         case .boxes: return "Les vêtements rangés pour plus tard ou pour un plus petit apparaîtront ici."
         case .forSale: return "Mettez un vêtement en vente depuis sa fiche : l'annonce est rédigée pour vous."
-        case .keepsakes: return "Les vêtements que vous gardez pour leur histoire."
+        case .archive: return "Les vêtements donnés, vendus ou gardés en souvenir restent consultables ici."
         }
     }
 
@@ -152,12 +166,15 @@ struct WardrobeView: View {
     @ViewBuilder
     private var secondLife: some View {
         let count = garments.filter { $0.state.hasLeftFamily }.count
-        if count > 0 {
-            Label("\(Formatting.count(count, "vêtement a", "vêtements ont")) trouvé une seconde vie", systemImage: "leaf")
-                .font(.footnote)
-                .foregroundStyle(Theme.secondaryText)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 8)
+        if count > 0 && currentScope != .archive {
+            Button { scope = .archive } label: {
+                Label("\(Formatting.count(count, "vêtement a", "vêtements ont")) trouvé une seconde vie", systemImage: "leaf.fill")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 8)
         }
     }
 }
@@ -177,7 +194,7 @@ private struct GarmentTile: View {
                             .padding(.vertical, 3)
                             .padding(.horizontal, 7)
                             .foregroundStyle(.white)
-                            .background(fit == .tooSmall ? Theme.terracotta : Theme.sage, in: Capsule())
+                            .background(fit == .tooSmall ? Theme.accent : Theme.ink.opacity(0.75), in: Capsule())
                             .padding(6)
                     }
                 }
@@ -190,6 +207,12 @@ private struct GarmentTile: View {
     }
 
     private var badge: String? {
+        switch garment.state {
+        case .donated: return "Donné"
+        case .sold: return "Vendu"
+        case .keepsake: return "Souvenir"
+        default: break
+        }
         switch fit {
         case .tooSmall: return "Trop petit"
         case .roomy, .tooBig: return "Plus tard"
@@ -202,21 +225,22 @@ enum WardrobeScope: Hashable {
     case child(UUID)
     case boxes
     case forSale
-    case keepsakes
+    /// Donated, sold and keepsakes: nothing is ever lost.
+    case archive
 
     func contains(_ garment: Garment) -> Bool {
         switch self {
         case .child(let id): return garment.state == .active && garment.owner?.id == id
         case .boxes: return garment.state == .stored
         case .forSale: return garment.state == .forSale
-        case .keepsakes: return garment.state == .keepsake
+        case .archive: return garment.state.hasLeftFamily || garment.state == .keepsake
         }
     }
 
     var acceptsNewGarments: Bool {
         switch self {
         case .child, .boxes: return true
-        case .forSale, .keepsakes: return false
+        case .forSale, .archive: return false
         }
     }
 }

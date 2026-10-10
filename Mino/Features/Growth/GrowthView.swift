@@ -3,14 +3,16 @@ import MinoKit
 import SwiftData
 import SwiftUI
 
-/// "La taille d'après": where the child is, where they are heading, and what the wardrobe
-/// will need, family boxes first.
+/// "La taille d'après": what to do now, where the child is heading, and what the wardrobe will
+/// need, family boxes first. Everything that asks for a gesture outside the daily outfit lives here.
 struct GrowthView: View {
     @Environment(AppRouter.self) private var router
     @Query(sort: \Child.createdAt) private var children: [Child]
     @Query private var garments: [Garment]
     @State private var selectedID: UUID?
     @State private var measuring: Child?
+    @State private var adding: Child?
+    @State private var sortBatch: SortBatch?
 
     private var selected: Child? {
         children.first { $0.id == selectedID } ?? children.first
@@ -19,7 +21,7 @@ struct GrowthView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 20) {
                     if children.count > 1, let selected {
                         ChipPicker(options: children.map(\.id), selection: Binding(get: { selected.id }, set: { selectedID = $0 })) { id in
                             children.first { $0.id == id }?.name ?? ""
@@ -27,9 +29,11 @@ struct GrowthView: View {
                     }
                     if let child = selected {
                         let family = FamilySnapshot(children: children, garments: garments)
-                        let profile = child.profile
-                        outlook(for: child, profile: profile)
-                        needs(for: child, family: family)
+                        let needs = family.needs(on: .now, calendar: .current).filter { $0.childID == child.id }
+                        let color = children.color(of: child)
+                        toDo(for: child, family: family, needs: needs)
+                        outlook(for: child, color: color)
+                        upcoming(for: child, family: family, needs: needs)
                     }
                 }
                 .padding(20)
@@ -37,44 +41,97 @@ struct GrowthView: View {
             .background(Theme.background)
             .navigationTitle("Grandir")
             .sheet(item: $measuring) { MeasureView(child: $0) }
+            .sheet(item: $sortBatch) { SortSessionView(garments: $0.garments, children: children) }
+            .sheet(item: $adding) { child in
+                NavigationStack {
+                    AddGarmentsView(owner: child, sizing: child.profile) { adding = nil }
+                        .navigationTitle("Pour \(child.name)")
+                        .navigationBarTitleDisplayMode(.inline)
+                }
+            }
             .onChange(of: router.focusedChildID, initial: true) { _, id in
                 if let id { selectedID = id }
             }
         }
     }
 
+    // MARK: To do
+
+    @ViewBuilder
+    private func toDo(for child: Child, family: FamilySnapshot, needs: [Need]) -> some View {
+        let items = Briefing.compose(family: family.profiles, items: family.items, needs: needs, on: .now)
+            .filter { $0.childID == child.id }
+        if !items.isEmpty {
+            sectionTitle("À faire")
+            ForEach(items) { item in
+                BriefingCard(content: content(for: item, child: child)) {
+                    perform(item, child: child, family: family)
+                }
+            }
+        }
+    }
+
+    private func content(for item: BriefingItem, child: Child) -> BriefingContent {
+        switch item {
+        case .sort(_, let itemIDs):
+            return BriefingContent(
+                symbol: "arrow.triangle.2.circlepath",
+                title: Formatting.count(itemIDs.count, "vêtement trop petit", "vêtements trop petits"),
+                message: "Une minute pour leur trouver une suite : frère ou sœur, cartons, don ou vente.",
+                action: "Trier"
+            )
+        case .retrieve(let need):
+            let size = SizeChart.shortLabel(size: need.size, kind: need.group.sizeKind)
+            return BriefingContent(
+                symbol: "shippingbox.fill", title: "Déjà dans vos cartons",
+                message: "\(need.group.displayName) : \(Formatting.count(need.familyStock.count, "pièce", "pièces")) en \(size) pour \(need.season.displayName). Inutile d'acheter.",
+                action: "Récupérer"
+            )
+        case .measure:
+            return BriefingContent(
+                symbol: "ruler.fill", title: "Mesurer \(child.name)",
+                message: "Trente secondes pour des prévisions de taille plus justes.", action: "Mesurer"
+            )
+        }
+    }
+
+    private func perform(_ item: BriefingItem, child: Child, family: FamilySnapshot) {
+        switch item {
+        case .sort(_, let itemIDs):
+            sortBatch = SortBatch(garments: itemIDs.compactMap(family.garment))
+        case .retrieve(let need):
+            for id in need.familyStock {
+                family.garment(id)?.move(to: .active, owner: child)
+            }
+        case .measure:
+            measuring = child
+        }
+    }
+
     // MARK: Outlook
 
-    private func outlook(for child: Child, profile: ChildProfile) -> some View {
+    private func outlook(for child: Child, color: Color) -> some View {
         let now = Date.now
+        let profile = child.profile
         let clothing = profile.currentSize(.clothing, on: now)
         let shoes = profile.currentSize(.shoes, on: now)
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Porte du \(SizeChart.label(size: clothing, kind: .clothing))")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(Theme.forest)
-                    if let next = profile.nextSize(.clothing, after: now) {
-                        Text("Passe en \(SizeChart.shortLabel(size: next.size, kind: .clothing)) \(Formatting.window(next.when))")
-                            .font(.subheadline)
-                            .foregroundStyle(Theme.secondaryText)
-                    }
-                }
-                Spacer()
+        return VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
+                SizeBadge(value: SizeChart.shortLabel(size: clothing, kind: .clothing), caption: "\(clothing) cm", color: color)
+                SizeBadge(value: "\(shoes)", caption: "pointure", color: color)
             }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(SizeChart.label(size: shoes, kind: .shoes))
-                    .font(.headline)
-                    .foregroundStyle(Theme.forest)
+            VStack(alignment: .leading, spacing: 6) {
+                if let next = profile.nextSize(.clothing, after: now) {
+                    Label("Passe en \(SizeChart.shortLabel(size: next.size, kind: .clothing)) \(Formatting.window(next.when))", systemImage: "arrow.up.right")
+                }
                 if let next = profile.nextSize(.shoes, after: now) {
-                    Text("Passe en \(next.size) \(Formatting.window(next.when))")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.secondaryText)
+                    Label("Pointure \(next.size) \(Formatting.window(next.when))", systemImage: "shoeprints.fill")
                 }
             }
+            .font(.subheadline)
+            .foregroundStyle(Theme.ink)
 
-            GrowthChart(profile: profile)
+            GrowthChart(profile: profile, color: color)
 
             Text(precisionNote(for: profile))
                 .font(.footnote)
@@ -90,44 +147,67 @@ struct GrowthView: View {
         guard let measured = profile.lastMeasuredHeightDate else {
             return "Estimation d'après la taille de ses vêtements et les courbes de l'OMS. Une mesure rendra les prévisions plus justes."
         }
-        return "D'après la mesure du \(Formatting.shortDate(measured)) et les courbes de l'OMS. La zone claire montre l'incertitude."
+        return "D'après la mesure du \(Formatting.shortDate(measured)) et les courbes de l'OMS. La zone colorée montre l'incertitude."
     }
 
-    // MARK: Needs
+    // MARK: Upcoming needs
 
     @ViewBuilder
-    private func needs(for child: Child, family: FamilySnapshot) -> some View {
-        let childNeeds = family.needs(on: .now, calendar: .current).filter { $0.childID == child.id }
+    private func upcoming(for child: Child, family: FamilySnapshot, needs: [Need]) -> some View {
         let ownCount = family.items.filter { $0.ownerID == child.id && $0.state == .active }.count
-
-        Text("À venir")
-            .font(.title3.weight(.semibold))
-            .foregroundStyle(Theme.forest)
-            .padding(.top, 6)
-
+        sectionTitle("À venir")
         if ownCount < NeedsForecaster.minimumItemsForAdvice {
             EmptyStateView(
-                symbol: "camera",
+                symbol: "camera.fill",
                 title: "Encore quelques photos",
                 message: "Dès \(NeedsForecaster.minimumItemsForAdvice) vêtements, Mino anticipe ce dont \(child.name) aura besoin."
-            )
-        } else if childNeeds.isEmpty {
+            ) {
+                Button("Ajouter des vêtements", systemImage: "plus") { adding = child }
+                    .buttonStyle(PrimaryButtonStyle())
+            }
+        } else if needs.isEmpty {
             EmptyStateView(
-                symbol: "leaf",
+                symbol: "leaf.fill",
                 title: "Rien ne manque",
                 message: "Le dressing de \(child.name) est prêt pour les semaines à venir."
             )
         } else {
-            ForEach(childNeeds) { need in
-                NeedRow(need: need, child: child, family: family)
+            ForEach(needs) { need in
+                NeedRow(need: need, family: family)
             }
         }
+    }
+
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.system(.title3, design: .rounded).weight(.bold))
+            .foregroundStyle(Theme.ink)
+            .padding(.top, 4)
+    }
+}
+
+private struct SizeBadge: View {
+    let value: String
+    let caption: String
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.system(.title2, design: .rounded).weight(.bold))
+                .foregroundStyle(color)
+            Text(caption)
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color.opacity(0.13), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 
 private struct NeedRow: View {
     let need: Need
-    let child: Child
     let family: FamilySnapshot
 
     var body: some View {
@@ -135,8 +215,8 @@ private struct NeedRow: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(need.group.displayName)
-                    .font(.headline)
-                    .foregroundStyle(Theme.forest)
+                    .font(.system(.headline, design: .rounded))
+                    .foregroundStyle(Theme.ink)
                 Spacer()
                 Text("pour \(need.season.displayName)")
                     .font(.caption)
@@ -145,8 +225,10 @@ private struct NeedRow: View {
             Text("\(need.missing) à prévoir en \(size), d'ici le \(Formatting.shortDate(need.neededBy))")
                 .font(.subheadline)
                 .foregroundStyle(Theme.secondaryText)
-
             if !need.familyStock.isEmpty {
+                Label("Dans vos cartons", systemImage: "shippingbox.fill")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.ink)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(need.familyStock, id: \.self) { id in
@@ -154,18 +236,13 @@ private struct NeedRow: View {
                                 .frame(width: 64, height: 64)
                         }
                     }
+                    .padding(.vertical, 4)
                 }
-                Button("Récupérer depuis les cartons", systemImage: "shippingbox") {
-                    for id in need.familyStock {
-                        family.garment(id)?.move(to: .active, owner: child)
-                    }
-                }
-                .buttonStyle(SecondaryButtonStyle())
             }
             if need.stillMissing > 0 {
                 Label("Reste à trouver : \(need.stillMissing)", systemImage: "magnifyingglass")
-                    .font(.footnote)
-                    .foregroundStyle(Theme.forest)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
             }
         }
         .minoCard()
@@ -174,6 +251,7 @@ private struct NeedRow: View {
 
 private struct GrowthChart: View {
     let profile: ChildProfile
+    let color: Color
 
     private struct Point: Identifiable {
         let date: Date
@@ -197,14 +275,14 @@ private struct GrowthChart: View {
                     yStart: .value("Bas", point.estimate.low),
                     yEnd: .value("Haut", point.estimate.high)
                 )
-                .foregroundStyle(Theme.sage.opacity(0.25))
+                .foregroundStyle(color.opacity(0.18))
                 LineMark(x: .value("Date", point.date), y: .value("Taille", point.estimate.expected))
-                    .foregroundStyle(Theme.sage)
-                    .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 4]))
+                    .foregroundStyle(color)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5, dash: [6, 4]))
             }
             ForEach(measured, id: \.date) { record in
                 PointMark(x: .value("Date", record.date), y: .value("Taille", record.heightCM ?? 0))
-                    .foregroundStyle(Theme.forest)
+                    .foregroundStyle(Theme.ink)
             }
             RuleMark(x: .value("Aujourd'hui", now))
                 .foregroundStyle(Theme.secondaryText.opacity(0.4))

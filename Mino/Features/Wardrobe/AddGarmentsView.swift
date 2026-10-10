@@ -3,8 +3,9 @@ import PhotosUI
 import SwiftData
 import SwiftUI
 
-/// Batch digitisation: pick up to 20 photos (or shoot them one after another), Mino lifts the
-/// garment off the background and pre-fills everything; the parent only confirms.
+/// Batch digitisation, validated by exception: pick up to 20 photos (or shoot them in a row),
+/// Mino lifts each garment off its background and fills everything in. The parent sees the
+/// whole batch at once, fixes only what is flagged or wrong, and adds it all in one tap.
 struct AddGarmentsView: View {
     /// `nil` adds to the family boxes.
     let owner: Child?
@@ -17,6 +18,7 @@ struct AddGarmentsView: View {
     @State private var pendingAnalyses = 0
     @State private var savedCount = 0
     @State private var showingCamera = false
+    @State private var editing: GarmentDraft?
 
     var body: some View {
         Group {
@@ -41,6 +43,14 @@ struct AddGarmentsView: View {
             }
             .ignoresSafeArea()
         }
+        .sheet(item: $editing) { draft in
+            DraftEditor(draft: draft, sizing: sizing) { edited in
+                if let index = drafts.firstIndex(where: { $0.id == draft.id }) {
+                    if let edited { drafts[index] = edited } else { drafts.remove(at: index) }
+                }
+                editing = nil
+            }
+        }
     }
 
     // MARK: Sources
@@ -50,10 +60,10 @@ struct AddGarmentsView: View {
             VStack(alignment: .leading, spacing: 16) {
                 if savedCount > 0 {
                     Label("\(Formatting.count(savedCount, "vêtement ajouté", "vêtements ajoutés"))", systemImage: "checkmark.circle.fill")
-                        .font(.headline)
-                        .foregroundStyle(Theme.forest)
+                        .font(.system(.title3, design: .rounded).weight(.bold))
+                        .foregroundStyle(Theme.ink)
                 } else {
-                    Text("Une dizaine de photos suffit pour commencer. Mino détoure, reconnaît la catégorie, la couleur et, si l'étiquette est visible, la taille.")
+                    Text("Une dizaine de photos suffit pour commencer. Mino détoure et reconnaît chaque vêtement : vous ne corrigez que ce qui le mérite.")
                         .foregroundStyle(Theme.secondaryText)
                 }
 
@@ -64,12 +74,12 @@ struct AddGarmentsView: View {
 
                 if CameraPicker.isAvailable {
                     Button { showingCamera = true } label: {
-                        SourceCard(symbol: "camera", title: "Prendre en photo", message: "Une photo après l'autre, en rafale")
+                        SourceCard(symbol: "camera.fill", title: "Prendre en photo", message: "Une photo après l'autre, en rafale")
                     }
                     .buttonStyle(.plain)
                 }
 
-                Label("Posé à plat sur un fond uni, le vêtement est détouré parfaitement.", systemImage: "lightbulb")
+                Label("Posé à plat sur un fond uni, le vêtement est détouré parfaitement.", systemImage: "lightbulb.fill")
                     .font(.footnote)
                     .foregroundStyle(Theme.secondaryText)
             }
@@ -90,18 +100,66 @@ struct AddGarmentsView: View {
     // MARK: Review
 
     private var review: some View {
-        DraftReview(draft: drafts[0], sizing: sizing, progress: reviewProgress) { confirmed in
-            drafts.removeFirst()
-            if let confirmed { save(confirmed) }
+        let toCheck = drafts.filter(\.needsReview).count
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(toCheck > 0 ? "\(Formatting.count(toCheck, "vêtement", "vêtements")) à vérifier" : "Tout est prêt")
+                        .font(.system(.title3, design: .rounded).weight(.bold))
+                        .foregroundStyle(Theme.ink)
+                    Text("Touchez un vêtement pour corriger ce que Mino a reconnu.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+
+                if drafts.contains(where: { $0.category.sizeKind == .clothing }) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Taille du lot")
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(Theme.secondaryText)
+                        ChipPicker(options: SizeChart.clothingSizes, selection: batchSize) {
+                            SizeChart.shortLabel(size: $0, kind: .clothing)
+                        }
+                    }
+                }
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 12)], spacing: 14) {
+                    ForEach(drafts) { draft in
+                        Button { editing = draft } label: { DraftTile(draft: draft) }
+                            .buttonStyle(.plain)
+                    }
+                }
+
+                if pendingAnalyses > 0 {
+                    ProgressView("Encore \(pendingAnalyses) en cours d'analyse…")
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(20)
         }
-        .id(drafts[0].id)
+        .safeAreaInset(edge: .bottom) {
+            Button("Ajouter \(Formatting.count(drafts.count, "vêtement", "vêtements"))", action: saveAll)
+                .buttonStyle(PrimaryButtonStyle())
+                .padding(20)
+                .background(.bar)
+        }
     }
 
-    private var reviewProgress: String {
-        let remaining = drafts.count - 1
-        var text = remaining > 0 ? "Encore \(remaining) après celui-ci" : "Dernier à valider"
-        if pendingAnalyses > 0 { text += " · \(pendingAnalyses) en cours d'analyse" }
-        return text
+    /// The size shared by the batch: the most common clothing size, applied to every garment
+    /// whose label was not read.
+    private var batchSize: Binding<Int> {
+        Binding(
+            get: {
+                let sizes = drafts.filter { $0.category.sizeKind == .clothing }.map(\.size)
+                return Dictionary(grouping: sizes, by: { $0 }).max { $0.value.count < $1.value.count }?.key
+                    ?? GarmentDraft.defaultSize(for: .clothing, sizing: sizing)
+            },
+            set: { size in
+                for index in drafts.indices where drafts[index].category.sizeKind == .clothing && !drafts[index].sizeWasRead {
+                    drafts[index].size = size
+                }
+            }
+        )
     }
 
     // MARK: Actions
@@ -122,15 +180,91 @@ struct AddGarmentsView: View {
         pendingAnalyses -= 1
     }
 
-    private func save(_ draft: GarmentDraft) {
-        let garment = Garment(
-            photo: draft.photo, category: draft.category, color: draft.color, size: draft.size,
-            occasion: draft.occasion, brand: draft.brand.trimmingCharacters(in: .whitespaces),
-            state: owner == nil ? .stored : .active
-        )
-        context.insert(garment)
-        garment.owner = owner
-        savedCount += 1
+    private func saveAll() {
+        for draft in drafts {
+            let garment = Garment(
+                photo: draft.photo, category: draft.category, color: draft.color, size: draft.size,
+                occasion: draft.occasion, brand: draft.brand.trimmingCharacters(in: .whitespaces),
+                state: owner == nil ? .stored : .active
+            )
+            context.insert(garment)
+            garment.owner = owner
+        }
+        savedCount += drafts.count
+        drafts = []
+    }
+}
+
+private struct DraftTile: View {
+    let draft: GarmentDraft
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            GarmentImage(photo: draft.photo)
+                .aspectRatio(1, contentMode: .fit)
+                .overlay {
+                    if draft.needsReview {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .strokeBorder(Theme.accent, lineWidth: 2.5)
+                    }
+                }
+                .overlay(alignment: .topTrailing) {
+                    if draft.needsReview {
+                        Text("À vérifier")
+                            .font(.caption2.weight(.bold))
+                            .padding(.vertical, 3)
+                            .padding(.horizontal, 7)
+                            .foregroundStyle(Theme.onAccent)
+                            .background(Theme.accent, in: Capsule())
+                            .padding(6)
+                    }
+                }
+            Text(draft.category.displayName)
+                .font(.system(.caption, design: .rounded).weight(.semibold))
+                .foregroundStyle(Theme.ink)
+                .lineLimit(1)
+            Text(SizeChart.shortLabel(size: draft.size, kind: draft.category.sizeKind))
+                .font(.caption2)
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(draft.category.displayName), \(SizeChart.shortLabel(size: draft.size, kind: draft.category.sizeKind))\(draft.needsReview ? ", à vérifier" : "")")
+    }
+}
+
+/// One garment of the batch, opened only when something needs fixing.
+/// `onDone` receives the edited draft, or `nil` to remove it from the batch.
+private struct DraftEditor: View {
+    @State var draft: GarmentDraft
+    let sizing: ChildProfile?
+    let onDone: (GarmentDraft?) -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    GarmentImage(photo: draft.photo)
+                        .frame(height: 220)
+                    GarmentFields(
+                        category: $draft.category, color: $draft.color, size: $draft.size,
+                        occasion: $draft.occasion, brand: $draft.brand,
+                        suggested: draft.suggestions, sizing: sizing
+                    )
+                    Button("Retirer du lot", role: .destructive) { onDone(nil) }
+                }
+                .padding(20)
+            }
+            .background(Theme.background)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") {
+                        draft.needsReview = false
+                        onDone(draft)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -143,53 +277,16 @@ private struct SourceCard: View {
         HStack(spacing: 16) {
             Image(systemName: symbol)
                 .font(.title2)
-                .foregroundStyle(Theme.forest)
-                .frame(width: 48, height: 48)
-                .background(Theme.sage.opacity(0.2), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .foregroundStyle(Theme.onAccent)
+                .frame(width: 52, height: 52)
+                .background(Theme.accent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline).foregroundStyle(Theme.forest)
+                Text(title).font(.system(.headline, design: .rounded)).foregroundStyle(Theme.ink)
                 Text(message).font(.subheadline).foregroundStyle(Theme.secondaryText)
             }
             Spacer()
             Image(systemName: "chevron.right").foregroundStyle(Theme.secondaryText)
         }
         .minoCard()
-    }
-}
-
-/// One pre-filled garment to confirm. `onDecision` receives the edited draft, or `nil` when skipped.
-private struct DraftReview: View {
-    @State var draft: GarmentDraft
-    let sizing: ChildProfile?
-    let progress: String
-    let onDecision: (GarmentDraft?) -> Void
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                GarmentImage(photo: draft.photo)
-                    .frame(height: 240)
-                GarmentFields(
-                    category: $draft.category, color: $draft.color, size: $draft.size,
-                    occasion: $draft.occasion, brand: $draft.brand, sizing: sizing
-                )
-            }
-            .padding(20)
-        }
-        .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 8) {
-                Text(progress)
-                    .font(.footnote)
-                    .foregroundStyle(Theme.secondaryText)
-                HStack(spacing: 12) {
-                    Button("Ignorer") { onDecision(nil) }
-                        .buttonStyle(SecondaryButtonStyle())
-                    Button("Ajouter") { onDecision(draft) }
-                        .buttonStyle(PrimaryButtonStyle())
-                }
-            }
-            .padding(20)
-            .background(.bar)
-        }
     }
 }

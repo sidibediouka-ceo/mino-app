@@ -22,7 +22,8 @@ public enum CategoryGuess {
         ("shirt", .longSleeve), ("blouse", .longSleeve), ("top", .longSleeve)
     ]
 
-    public static func category(fromLabels labels: [(identifier: String, confidence: Float)]) -> GarmentCategory? {
+    /// Categories suggested by the labels, most likely first. Weak signals are dropped.
+    public static func ranked(fromLabels labels: [(identifier: String, confidence: Float)]) -> [GarmentCategory] {
         var scores: [GarmentCategory: Float] = [:]
         for label in labels where label.confidence >= 0.1 {
             let identifier = label.identifier.lowercased()
@@ -30,7 +31,9 @@ public enum CategoryGuess {
                 scores[match.1, default: 0] += label.confidence
             }
         }
-        guard let best = scores.max(by: { $0.value < $1.value }), best.value >= 0.15 else { return nil }
-        return best.key
+        return scores
+            .filter { $0.value >= 0.15 }
+            .sorted { $0.value == $1.value ? $0.key.rawValue < $1.key.rawValue : $0.value > $1.value }
+            .map(\.key)
     }
 }

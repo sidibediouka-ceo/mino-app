@@ -3,8 +3,8 @@ import SwiftData
 import SwiftUI
 import WeatherKit
 
-/// "Le soir, c'est prêt": one outfit per child, explained, plus at most three useful things to do.
-/// From 4 pm the screen switches to tomorrow on its own.
+/// "Le soir, c'est prêt": the outfit of each child, and nothing else. From 4 pm the screen
+/// shows tomorrow on its own. Planning and sorting live in the other tabs.
 struct TodayView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.colorScheme) private var colorScheme
@@ -17,9 +17,8 @@ struct TodayView: View {
     @AppStorage("eveningReminderAsked") private var reminderAsked = false
     @AppStorage("eveningReminderMinutes") private var reminderMinutes = 19 * 60 + 30
     @State private var showsTomorrow = Calendar.current.component(.hour, from: .now) >= 16
-    @State private var sheet: TodaySheet?
+    @State private var showingSettings = false
     @State private var dressingPlan: PlannedOutfit?
-    @State private var toast: String?
 
     private let calendar = Calendar.current
 
@@ -41,22 +40,15 @@ struct TodayView: View {
 
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 24) {
                     header(forecast: forecast)
-
-                    Picker("Jour", selection: $showsTomorrow) {
-                        Text("Aujourd'hui").tag(false)
-                        Text("Demain").tag(true)
-                    }
-                    .pickerStyle(.segmented)
 
                     ForEach(children) { child in
                         if let plan = plans.first(where: { $0.child?.id == child.id && calendar.isDate($0.day, inSameDayAs: day) }) {
                             OutfitCard(
-                                child: child, plan: plan, family: family,
+                                child: child, color: children.color(of: child), plan: plan, family: family,
                                 onSwap: { planner.swap($0, in: plan, forecast: forecast) },
                                 onContext: { planner.setContext($0, for: plan, forecast: forecast) },
-                                onConfirm: { planner.confirm(plan) },
                                 onDressing: { dressingPlan = plan },
                                 onGaps: { router.showGrowth(of: child.id) }
                             )
@@ -67,22 +59,6 @@ struct TodayView: View {
                         reminderInvite
                     }
 
-                    let briefing = Briefing.compose(
-                        family: family.profiles, items: family.items,
-                        needs: family.needs(on: .now, calendar: calendar), on: .now
-                    )
-                    if !briefing.isEmpty {
-                        Text("À prévoir")
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(Theme.forest)
-                            .padding(.top, 4)
-                        ForEach(briefing) { item in
-                            BriefingCard(content: content(for: item, family: family)) {
-                                perform(item, family: family)
-                            }
-                        }
-                    }
-
                     attribution
                 }
                 .padding(20)
@@ -90,13 +66,13 @@ struct TodayView: View {
             .background(Theme.background)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { sheet = .settings } label: {
+                    Button { showingSettings = true } label: {
                         Image(systemName: "gearshape")
+                            .foregroundStyle(Theme.ink)
                     }
                     .accessibilityLabel("Réglages")
                 }
             }
-            .overlay(alignment: .bottom) { toastView }
         }
         .task(id: refreshKey) {
             await weather.refresh()
@@ -104,25 +80,11 @@ struct TodayView: View {
             planner.ensurePlans(for: day, forecast: weather.forecast(for: day))
             await scheduleReminders()
         }
-        .sheet(item: $sheet) { sheet in
-            switch sheet {
-            case .add(let child):
-                NavigationStack {
-                    AddGarmentsView(owner: child, sizing: child.profile) { self.sheet = nil }
-                        .navigationTitle("Ajouter")
-                        .navigationBarTitleDisplayMode(.inline)
-                }
-            case .sort(let items):
-                SortSessionView(garments: items, children: children)
-            case .measure(let child):
-                MeasureView(child: child)
-            case .settings:
-                SettingsView()
-            }
-        }
+        .sheet(isPresented: $showingSettings) { SettingsView() }
         .fullScreenCover(item: $dressingPlan) { plan in
             DressingTogetherView(
                 childName: plan.child?.name ?? "",
+                color: plan.child.map { children.color(of: $0) } ?? Theme.accent,
                 garments: plan.outfit.pieces.compactMap { family.garment($0.itemID) }
             ) {
                 planner.confirm(plan)
@@ -133,37 +95,49 @@ struct TodayView: View {
     // MARK: Sections
 
     private func header(forecast: DayForecast) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(calendar.component(.hour, from: .now) < 18 ? "Bonjour" : "Bonsoir")
-                    .font(.largeTitle.weight(.bold))
-                    .foregroundStyle(Theme.forest)
-                Text(Formatting.longDate(.now))
-                    .foregroundStyle(Theme.secondaryText)
+        VStack(alignment: .leading, spacing: 14) {
+            Text(Formatting.longDate(.now))
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                .foregroundStyle(Theme.secondaryText)
+            HStack(alignment: .center) {
+                Text(showsTomorrow ? "Demain" : "Aujourd'hui")
+                    .font(.system(size: 38, weight: .bold, design: .rounded))
+                    .foregroundStyle(Theme.ink)
+                Spacer()
+                Button(showsTomorrow ? "Aujourd'hui" : "Demain", systemImage: showsTomorrow ? "arrow.left" : "arrow.right") {
+                    withAnimation(.snappy) { showsTomorrow.toggle() }
+                }
+                .buttonStyle(SecondaryButtonStyle())
+                .accessibilityHint("Affiche les tenues de ce jour-là")
             }
-            HStack(spacing: 8) {
+            HStack(spacing: 14) {
                 Image(systemName: Formatting.symbol(for: forecast))
                     .symbolRenderingMode(.multicolor)
-                Text(showsTomorrow ? "Demain" : "Aujourd'hui").fontWeight(.semibold)
-                Text(Formatting.forecast(forecast))
-                if forecast.isEstimate {
-                    Text("· estimation de saison").foregroundStyle(Theme.secondaryText)
+                    .font(.system(size: 40))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(Int(forecast.morningC.rounded()))° le matin · \(Int(forecast.highC.rounded()))° l'après-midi")
+                        .font(.system(.headline, design: .rounded))
+                        .foregroundStyle(Theme.ink)
+                    Text(weatherNote(forecast))
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.secondaryText)
                 }
             }
-            .font(.subheadline)
-            .foregroundStyle(Theme.forest)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            .background(Theme.card, in: Capsule())
             .accessibilityElement(children: .combine)
         }
     }
 
+    private func weatherNote(_ forecast: DayForecast) -> String {
+        if forecast.isEstimate { return "Estimation de saison, météo indisponible" }
+        if forecast.isRainy { return "Pluie probable (\(Int((forecast.precipitationChance * 100).rounded())) %)" }
+        return forecast.condition == .clear ? "Grand soleil" : "Sans pluie"
+    }
+
     private var reminderInvite: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("Chaque soir, demain est prêt", systemImage: "moon.stars")
-                .font(.headline)
-                .foregroundStyle(Theme.forest)
+            Label("Chaque soir, demain est prêt", systemImage: "moon.stars.fill")
+                .font(.system(.headline, design: .rounded))
+                .foregroundStyle(Theme.ink)
             Text("Mino peut vous prévenir à 19 h 30 avec la météo du lendemain. Une seule notification, jamais de publicité.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.secondaryText)
@@ -195,93 +169,6 @@ struct TodayView: View {
             .font(.caption2)
             .foregroundStyle(Theme.secondaryText)
             .frame(maxWidth: .infinity)
-            .padding(.top, 8)
-        }
-    }
-
-    @ViewBuilder
-    private var toastView: some View {
-        if let toast {
-            Text(toast)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Theme.onForest)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 18)
-                .background(Theme.forest, in: Capsule())
-                .padding(.bottom, 12)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .id(toast)
-                .task {
-                    try? await Task.sleep(for: .seconds(2.5))
-                    withAnimation { self.toast = nil }
-                }
-        }
-    }
-
-    // MARK: Briefing
-
-    private func content(for item: BriefingItem, family: FamilySnapshot) -> BriefingContent {
-        let name = { (id: UUID) in family.child(id)?.name ?? "" }
-        switch item {
-        case .addGarments(let childID):
-            return BriefingContent(
-                symbol: "camera", title: "La garde-robe de \(name(childID))",
-                message: "Quelques photos de plus et Mino préparera des tenues plus variées.", action: "Ajouter des vêtements"
-            )
-        case .sort(let childID, let itemIDs):
-            return BriefingContent(
-                symbol: "arrow.triangle.2.circlepath",
-                title: "\(Formatting.count(itemIDs.count, "vêtement trop petit", "vêtements trop petits")) pour \(name(childID))",
-                message: "Une minute pour décider : frère ou sœur, cartons, don ou vente.", action: "Trier"
-            )
-        case .retrieve(let need):
-            let size = SizeChart.shortLabel(size: need.size, kind: need.group.sizeKind)
-            return BriefingContent(
-                symbol: "shippingbox", title: "Déjà dans vos cartons",
-                message: "\(need.group.displayName) : \(Formatting.count(need.familyStock.count, "pièce", "pièces")) en \(size) pour \(name(need.childID)), pour \(need.season.displayName). Inutile d'acheter.",
-                action: "Récupérer"
-            )
-        case .prepare(let need):
-            let size = SizeChart.shortLabel(size: need.size, kind: need.group.sizeKind)
-            return BriefingContent(
-                symbol: "calendar", title: "\(need.group.displayName) pour \(name(need.childID))",
-                message: "Il en manquera \(need.stillMissing) en \(size) d'ici le \(Formatting.shortDate(need.neededBy)).",
-                action: "Voir"
-            )
-        case .sizeUp(let childID, let milestone):
-            return BriefingContent(
-                symbol: "ruler", title: "\(name(childID)) passe bientôt en \(SizeChart.shortLabel(size: milestone.size, kind: milestone.kind))",
-                message: "\(Formatting.sentence(Formatting.window(milestone.when))). Mino a déjà regardé ce qui l'attend.",
-                action: "Voir"
-            )
-        case .measure(let childID):
-            return BriefingContent(
-                symbol: "ruler", title: "Mesurer \(name(childID)) ?",
-                message: "Trente secondes pour des prévisions de taille plus justes.", action: "Mesurer"
-            )
-        }
-    }
-
-    private func perform(_ item: BriefingItem, family: FamilySnapshot) {
-        switch item {
-        case .addGarments(let childID):
-            if let child = family.child(childID) { sheet = .add(child) }
-        case .sort(_, let itemIDs):
-            sheet = .sort(itemIDs.compactMap(family.garment))
-        case .retrieve(let need):
-            guard let child = family.child(need.childID) else { return }
-            for id in need.familyStock {
-                family.garment(id)?.move(to: .active, owner: child)
-            }
-            withAnimation {
-                toast = "\(Formatting.count(need.familyStock.count, "pièce ajoutée", "pièces ajoutées")) au dressing de \(child.name)"
-            }
-        case .prepare(let need):
-            router.showGrowth(of: need.childID)
-        case .sizeUp(let childID, _):
-            router.showGrowth(of: childID)
-        case .measure(let childID):
-            if let child = family.child(childID) { sheet = .measure(child) }
         }
     }
 
@@ -293,22 +180,6 @@ struct TodayView: View {
             let forecast = weather.forecast(for: day)
             let outlook = forecast.isEstimate ? "" : "\(Formatting.forecast(forecast)). "
             return outlook + (plural ? "Les tenues de \(names) sont prêtes." : "La tenue de \(names) est prête.")
-        }
-    }
-}
-
-private enum TodaySheet: Identifiable {
-    case add(Child)
-    case sort([Garment])
-    case measure(Child)
-    case settings
-
-    var id: String {
-        switch self {
-        case .add(let child): return "add-\(child.id)"
-        case .sort(let garments): return "sort-\(garments.map(\.id))"
-        case .measure(let child): return "measure-\(child.id)"
-        case .settings: return "settings"
         }
     }
 }

@@ -18,7 +18,7 @@ struct MeasureView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("\(height, specifier: "%.1f") cm")
                             .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                            .foregroundStyle(Theme.forest)
+                            .foregroundStyle(Theme.ink)
                         Slider(value: $height, in: 45...190, step: 0.5)
                         Stepper("Ajuster", value: $height, in: 45...190, step: 0.5)
                     }

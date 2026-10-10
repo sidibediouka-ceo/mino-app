@@ -54,8 +54,8 @@ Un enfant change de taille **tous les 6 à 12 mois** avant 6 ans. Sa garde-robe 
 
 Ses principes de conception :
 1. **L'intelligence se ressent, elle ne s'affiche pas.** On ne parle jamais d'« IA ». On voit seulement une tenue juste et une phrase d'explication (« 8° ce matin et pluie : imperméable et bottes »).
-2. **Toute recommandation mène à un geste** : *Habillé*, *Récupérer*, *Transmettre*, *Mesurer*, *Trier*.
-3. **Moins d'actions, mais de meilleures.** Au plus trois suggestions par jour, triées par utilité.
+2. **Toute recommandation mène à un geste** : *Habiller*, *Récupérer*, *Transmettre*, *Mesurer*, *Trier*.
+3. **Moins d'actions, mais de meilleures.** L'accueil ne montre que les tenues. Les suggestions (trier, récupérer, mesurer) vivent dans *Grandir*, signalées par un simple badge.
 4. **L'incertitude est dite honnêtement.** « Vers mi-février (entre janvier et mars) » plutôt qu'une date fausse.
 5. **Les cartons de la famille passent avant l'achat.**
 
@@ -73,7 +73,7 @@ Le produit repose sur une entrée et trois boucles. Chaque boucle a un budget d'
 - **19 h 30**, une notification opt-in : « Demain 8° et pluie. Les tenues de Léo et Inès sont prêtes. »
 - À partir de 16 h, l'écran *Aujourd'hui* bascule seul sur **demain**.
 - Pour chaque enfant : une tenue complète et justifiée. Toucher une pièce la remplace par la meilleure alternative. Le contexte (École, Sport, Sortie, Fête, Maison) s'ajuste en un geste.
-- **« Habillé »** en un geste : le vêtement est marqué comme porté, la rotation se met à jour et Mino apprend.
+- **Aucune confirmation à faire** : une tenue planifiée est considérée comme portée une fois la journée passée. Mino met à jour la rotation et apprend des échanges de pièces faits par le parent.
 - **Mode enfant** au matin : les pièces en grand, dans l'ordre d'habillage, que l'enfant coche lui-même. Ce mode est inspiré des crèches japonaises. Il transforme une corvée en autonomie, et c'est un moment que les enfants réclament.
 - **Budget : 1 geste par jour.**
 
@@ -111,9 +111,9 @@ La boucle suit le modèle *trigger → action → récompense → investissement
 | Étape | Mécanisme Mino |
 |---|---|
 | **Déclencheur interne** | La petite angoisse de 19 h (« et demain ? »). Le déclencheur externe, la notification du soir, ne sert qu'à l'amorcer. |
-| **Action minimale** | Ouvrir, voir la tenue, toucher *Habillé*. |
+| **Action minimale** | Ouvrir et voir la tenue. Au besoin, toucher une pièce pour l'échanger. |
 | **Récompense variable** | La tenue juste avec sa phrase d'explication, et parfois une bonne nouvelle : « Rien à racheter cet hiver », « 3 pantalons d'Inès iront à Léo en mars », « 12 vêtements ont eu une seconde vie cette année ». |
-| **Investissement** | Chaque *Habillé*, chaque mesure et chaque tri rendent Mino plus juste. Les préférences et les routines (« le mercredi, c'est sport ») sont apprises, jamais saisies. |
+| **Investissement** | Chaque échange de pièce, chaque mesure et chaque tri rendent Mino plus juste. Les préférences et les routines (« le mercredi, c'est sport ») sont apprises, jamais saisies. |
 
 Avec le **Mode enfant**, c'est l'enfant qui demande à ouvrir l'app le matin.
 

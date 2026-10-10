@@ -1,13 +1,16 @@
 import MinoKit
 import SwiftUI
 
-/// The garment editor shared by the add flow and the detail screen: chips everywhere, typing only for the brand.
+/// The garment editor shared by the add flow and the detail screen. Mino's guesses come first,
+/// rarely needed details are folded away, and only the brand is ever typed.
 struct GarmentFields: View {
     @Binding var category: GarmentCategory
     @Binding var color: GarmentColor
     @Binding var size: Int
     @Binding var occasion: Occasion
     @Binding var brand: String
+    /// Categories Mino recognised, most likely first; they lead the list.
+    let suggested: [GarmentCategory]
     /// The child sizes are suggested and checked against.
     let sizing: ChildProfile?
 
@@ -16,10 +19,14 @@ struct GarmentFields: View {
 
     private var kind: SizeKind { category.sizeKind }
 
+    private var categoryOptions: [GarmentCategory] {
+        suggested + GarmentCategory.allCases.filter { !suggested.contains($0) }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             field("Catégorie") {
-                ChipPicker(options: GarmentCategory.allCases, selection: $category, title: \.displayName)
+                ChipPicker(options: categoryOptions, selection: $category, title: \.displayName)
             }
             field("Couleur") {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -28,7 +35,7 @@ struct GarmentFields: View {
                             Button { color = option } label: {
                                 ColorSwatch(color: option, size: 34)
                                     .padding(3)
-                                    .overlay(Circle().strokeBorder(Theme.forest, lineWidth: option == color ? 2 : 0))
+                                    .overlay(Circle().strokeBorder(Theme.ink, lineWidth: option == color ? 2 : 0))
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(option.displayName)
@@ -55,17 +62,23 @@ struct GarmentFields: View {
                         }
                     }
                     if let labelMessage {
-                        Text(labelMessage).font(.footnote).foregroundStyle(Theme.forest)
+                        Text(labelMessage).font(.footnote).foregroundStyle(Theme.ink)
                     }
                 }
             }
-            field("Occasion") {
-                ChipPicker(options: Occasion.allCases, selection: $occasion, title: \.displayName)
+            DisclosureGroup("Plus de détails") {
+                VStack(alignment: .leading, spacing: 20) {
+                    field("Occasion") {
+                        ChipPicker(options: Occasion.allCases, selection: $occasion, title: \.displayName)
+                    }
+                    field("Marque") {
+                        TextField("Ex. Petit Bateau", text: $brand)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                }
+                .padding(.top, 12)
             }
-            field("Marque (facultatif)") {
-                TextField("Ex. Petit Bateau", text: $brand)
-                    .textFieldStyle(.roundedBorder)
-            }
+            .tint(Theme.ink)
         }
         .onChange(of: category) { oldValue, newValue in
             if oldValue.sizeKind != newValue.sizeKind {
@@ -83,7 +96,7 @@ struct GarmentFields: View {
     private func field<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
                 .foregroundStyle(Theme.secondaryText)
             content()
         }
@@ -119,14 +132,23 @@ struct GarmentDraft: Identifiable {
     var size: Int
     var occasion: Occasion = .everyday
     var brand = ""
+    /// Recognised categories, most likely first.
+    let suggestions: [GarmentCategory]
+    /// The size came from the care label, so batch-wide size changes leave it alone.
+    let sizeWasRead: Bool
+    /// Mino could not tell what it is: the parent should have a look.
+    var needsReview: Bool
 
     init(analysis: GarmentAnalysis, sizing: ChildProfile?) {
-        let category = analysis.category ?? .tshirt
+        let category = analysis.categories.first ?? .tshirt
+        let readSize = SizeLabelParser.size(in: analysis.texts, kind: category.sizeKind)
         self.photo = analysis.photo
         self.category = category
         self.color = analysis.color ?? .white
-        self.size = SizeLabelParser.size(in: analysis.texts, kind: category.sizeKind)
-            ?? Self.defaultSize(for: category.sizeKind, sizing: sizing)
+        self.size = readSize ?? Self.defaultSize(for: category.sizeKind, sizing: sizing)
+        self.suggestions = Array(analysis.categories.prefix(3))
+        self.sizeWasRead = readSize != nil
+        self.needsReview = analysis.categories.isEmpty
     }
 
     /// Most garments a parent photographs fit the child today.

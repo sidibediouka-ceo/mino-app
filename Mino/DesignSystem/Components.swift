@@ -2,26 +2,29 @@ import MinoKit
 import SwiftUI
 
 extension View {
-    /// The standard rounded surface used for every card.
+    /// The standard rounded surface.
     func minoCard(padding: CGFloat = 16) -> some View {
         self
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .shadow(color: .black.opacity(0.05), radius: 12, y: 4)
+            .background(Theme.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.06), radius: 16, y: 6)
     }
 }
 
+/// The one action that matters on a screen: full width, colourful.
 struct PrimaryButtonStyle: ButtonStyle {
+    var color: Color = Theme.accent
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
+            .font(.system(.headline, design: .rounded))
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .foregroundStyle(Theme.onForest)
-            .background(Theme.forest, in: Capsule())
-            .opacity(configuration.isPressed ? 0.8 : 1)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .padding(.vertical, 15)
+            .foregroundStyle(Theme.onAccent)
+            .background(color, in: Capsule())
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(.snappy(duration: 0.15), value: configuration.isPressed)
     }
 }
@@ -29,11 +32,11 @@ struct PrimaryButtonStyle: ButtonStyle {
 struct SecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.subheadline.weight(.semibold))
+            .font(.system(.subheadline, design: .rounded).weight(.semibold))
             .padding(.vertical, 10)
-            .padding(.horizontal, 14)
-            .foregroundStyle(Theme.forest)
-            .background(Theme.sage.opacity(0.22), in: Capsule())
+            .padding(.horizontal, 16)
+            .foregroundStyle(Theme.ink)
+            .background(Theme.chip, in: Capsule())
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }
@@ -47,11 +50,11 @@ struct Chip: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                .font(.system(.subheadline, design: .rounded).weight(isSelected ? .semibold : .regular))
                 .padding(.vertical, 8)
                 .padding(.horizontal, 14)
-                .foregroundStyle(isSelected ? Theme.onForest : Theme.forest)
-                .background(isSelected ? Theme.forest : Theme.sage.opacity(0.18), in: Capsule())
+                .foregroundStyle(isSelected ? Theme.background : Theme.ink)
+                .background(isSelected ? Theme.ink : Theme.chip, in: Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -82,23 +85,24 @@ struct ChipPicker<Value: Hashable>: View {
     }
 }
 
-/// A garment's photo on a soft background, or a quiet placeholder.
+/// A garment laid flat on a white tile, like a flat-lay photo.
 struct GarmentImage: View {
     let photo: Data?
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Theme.sage.opacity(0.14))
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Theme.card)
+                .shadow(color: .black.opacity(0.07), radius: 8, y: 3)
             if let photo, let image = UIImage(data: photo) {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
-                    .padding(8)
+                    .padding(10)
             } else {
                 Image(systemName: "tshirt")
                     .font(.title2)
-                    .foregroundStyle(Theme.sage)
+                    .foregroundStyle(Theme.secondaryText)
             }
         }
         .accessibilityHidden(true)
@@ -122,41 +126,51 @@ struct ColorSwatch: View {
     }
 }
 
-/// A child's initial in a soft circle.
+/// A child's initial in their own colour.
 struct ChildAvatar: View {
     let name: String
+    let color: Color
     var size: CGFloat = 36
 
     var body: some View {
         Text(name.prefix(1).uppercased())
-            .font(.system(size: size * 0.45, weight: .semibold, design: .rounded))
-            .foregroundStyle(Theme.onForest)
+            .font(.system(size: size * 0.45, weight: .bold, design: .rounded))
+            .foregroundStyle(.white)
             .frame(width: size, height: size)
-            .background(Theme.sage, in: Circle())
+            .background(color, in: Circle())
             .accessibilityHidden(true)
     }
 }
 
 /// A large empty state with one clear next step.
-struct EmptyStateView: View {
+struct EmptyStateView<Action: View>: View {
     let symbol: String
     let title: String
     let message: String
+    @ViewBuilder var action: Action
 
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: symbol)
                 .font(.system(size: 44))
-                .foregroundStyle(Theme.sage)
+                .foregroundStyle(Theme.accent)
             Text(title)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(Theme.forest)
+                .font(.system(.title3, design: .rounded).weight(.bold))
+                .foregroundStyle(Theme.ink)
             Text(message)
                 .font(.subheadline)
                 .foregroundStyle(Theme.secondaryText)
                 .multilineTextAlignment(.center)
+            action
+                .padding(.top, 4)
         }
         .padding(32)
         .frame(maxWidth: .infinity)
+    }
+}
+
+extension EmptyStateView where Action == EmptyView {
+    init(symbol: String, title: String, message: String) {
+        self.init(symbol: symbol, title: title, message: message) { EmptyView() }
     }
 }
