@@ -142,36 +142,16 @@ private struct DemoLibrary {
             addGrowth(to: jeanne, daysAgo: 60, height: 133, shoe: 33)
         }
         let items: [Item] = [
-            Item(image: "tshirt-white", category: .tshirt, color: .white),
-            Item(image: "tshirt-pink", category: .tshirt, color: .pink),
-            Item(image: "tshirt-yellow", category: .tshirt, color: .yellow),
-            Item(image: "tshirt-stripes", category: .tshirt, color: .navy),
-            Item(image: "longsleeve-stripes", category: .longSleeve, color: .white),
+            Item(image: "tshirt-ruffle", category: .tshirt, color: .white),
+            Item(image: "longsleeve-stripes", category: .longSleeve, color: .navy),
             Item(image: "hoodie-lilac", category: .sweater, color: .purple),
+            Item(image: "cardigan-cream", category: .cardigan, color: .white),
+            Item(image: "dress-pink", category: .dress, color: .pink, occasion: .dressy),
+            Item(image: "jeans-wide", category: .pants, color: .denim),
             Item(image: "leggings-pink", category: .pants, color: .pink),
-            Item(image: "longsleeve-white", category: .longSleeve, color: .white),
-            Item(image: "longsleeve-green", category: .longSleeve, color: .green),
-            Item(image: "turtleneck-beige", category: .turtleneck, color: .beige),
-            Item(image: "sweater-navy", category: .sweater, color: .navy),
-            Item(image: "sweater-red", category: .sweater, color: .red),
-            Item(image: "cardigan-pink", category: .cardigan, color: .pink),
-            Item(image: "dress-flowers", category: .dress, color: .navy, occasion: .dressy),
-            Item(image: "dress-yellow", category: .dress, color: .yellow),
-            Item(image: "playsuit-green", category: .playsuit, color: .green),
-            Item(image: "pants-denim", category: .pants, color: .denim),
-            Item(image: "pants-beige", category: .pants, color: .beige),
-            Item(image: "pants-black", category: .pants, color: .black, occasion: .sport),
-            Item(image: "overalls-denim", category: .overalls, color: .denim, size: 140),
             Item(image: "skirt-pink", category: .shorts, color: .pink),
-            Item(image: "tights-grey", category: .tights, color: .grey),
-            Item(image: "tights-pink", category: .tights, color: .pink),
-            Item(image: "jacket-flowers", category: .lightJacket, color: .multicolor),
-            Item(image: "coat-beige", category: .coat, color: .beige, size: 140),
-            Item(image: "raincoat-yellow", category: .raincoat, color: .yellow),
-            Item(image: "sneakers-white", category: .sneakers, color: .white, size: 33),
-            Item(image: "boots-brown", category: .boots, color: .brown, size: 34),
-            Item(image: "beanie-red", category: .coldAccessory, color: .red),
-            Item(image: "pajamas-stars", category: .pajamas, color: .purple)
+            Item(image: "jacket-denim", category: .lightJacket, color: .denim),
+            Item(image: "jacket-flowers", category: .lightJacket, color: .multicolor)
         ]
         for (index, item) in items.enumerated() where !owns(jeanne, item) {
             guard let garment = insert(item, state: .active, owner: jeanne) else { continue }
@@ -241,8 +221,8 @@ private struct DemoLibrary {
         let jeanne = preparedJeanne()
         let date = calendar.startOfDay(for: .now.addingTimeInterval(3 * day))
         let chosen = pieces(of: jeanne, [
-            (.top, .longSleeve, .white), (.bottom, .shorts, .pink), (.legwear, .tights, .grey),
-            (.outerwear, .lightJacket, .multicolor), (.shoes, .sneakers, .white)
+            (.onePiece, .dress, .pink), (.legwear, .tights, .grey), (.layer, .cardigan, .white),
+            (.outerwear, .lightJacket, .denim), (.shoes, .sneakers, .white)
         ])
         guard isComplete(chosen) else { return "En attente des photos : il faut au moins un haut et un bas." }
         let plan = replacePlan(for: jeanne, on: date)
@@ -255,13 +235,13 @@ private struct DemoLibrary {
     private func journal() -> String {
         let jeanne = preparedJeanne()
         let outfits: [[(OutfitSlot, GarmentCategory, GarmentColor)]] = [
-            [(.top, .longSleeve, .white), (.bottom, .pants, .pink), (.layer, .sweater, .purple), (.shoes, .sneakers, .white)],
-            [(.top, .longSleeve, .white), (.bottom, .shorts, .pink), (.legwear, .tights, .grey),
+            [(.top, .longSleeve, .navy), (.bottom, .pants, .denim), (.layer, .cardigan, .white), (.shoes, .sneakers, .white)],
+            [(.top, .tshirt, .white), (.bottom, .shorts, .pink), (.legwear, .tights, .grey),
              (.outerwear, .lightJacket, .multicolor), (.shoes, .sneakers, .white)],
-            [(.top, .turtleneck, .beige), (.bottom, .pants, .beige), (.layer, .sweater, .red), (.shoes, .boots, .brown)],
-            [(.onePiece, .dress, .yellow), (.legwear, .tights, .pink), (.layer, .cardigan, .pink), (.shoes, .sneakers, .white)],
-            [(.top, .tshirt, .navy), (.bottom, .pants, .black), (.outerwear, .lightJacket, .denim), (.shoes, .sneakers, .white)],
-            [(.top, .longSleeve, .green), (.bottom, .pants, .denim), (.outerwear, .raincoat, .yellow), (.shoes, .boots, .brown)]
+            [(.top, .tshirt, .white), (.bottom, .pants, .pink), (.layer, .sweater, .purple), (.shoes, .sneakers, .white)],
+            [(.onePiece, .dress, .pink), (.legwear, .tights, .grey), (.outerwear, .lightJacket, .denim), (.shoes, .sneakers, .white)],
+            [(.top, .longSleeve, .navy), (.bottom, .shorts, .pink), (.layer, .sweater, .purple), (.shoes, .boots, .brown)],
+            [(.top, .tshirt, .white), (.bottom, .pants, .denim), (.outerwear, .lightJacket, .denim), (.shoes, .sneakers, .white)]
         ]
         let photo = resource("DemoOutfitPhoto", "jpg")
         var saved = 0
