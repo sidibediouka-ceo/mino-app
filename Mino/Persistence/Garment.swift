@@ -22,6 +22,8 @@ final class Garment {
     var owner: Child?
     /// The child who wore it last, kept when it moves to the boxes, a sibling or a second life.
     var lastOwnerID: UUID?
+    /// Set when the garment is put up for sale.
+    var conditionRaw: String?
 
     init(
         photo: Data?, category: GarmentCategory, color: GarmentColor, size: Int,
@@ -56,11 +58,16 @@ final class Garment {
         set { stateRaw = newValue.rawValue }
     }
 
+    var condition: Condition? {
+        get { conditionRaw.flatMap(Condition.init(rawValue:)) }
+        set { conditionRaw = newValue?.rawValue }
+    }
+
     var item: WardrobeItem {
         WardrobeItem(
             id: id, ownerID: owner?.id, category: category, color: color, size: size,
             occasion: occasion, state: state, lastWornAt: lastWornAt, affinity: affinity,
-            fitConfirmedAt: fitConfirmedAt
+            fitConfirmedAt: fitConfirmedAt, condition: condition
         )
     }
 

@@ -147,11 +147,12 @@ final class RecognitionAndListingTests: XCTestCase {
     }
 
     func testListing() {
-        let item = WardrobeItem(ownerID: nil, category: .coat, color: .navy, size: 104, occasion: .dressy)
+        let item = WardrobeItem(ownerID: nil, category: .coat, color: .navy, size: 104, occasion: .dressy, condition: .veryGood)
         let listing = ListingWriter.listing(for: item, brand: "Petit Bateau")
         XCTAssertEqual(listing.title, "Manteau enfant · 4 ans · Petit Bateau")
         XCTAssertTrue(listing.description.contains("Taille : 4 ans · 104 cm"))
         XCTAssertTrue(listing.description.contains("Idéal pour les fêtes"))
+        XCTAssertTrue(listing.description.contains("État : Très bon état"))
         XCTAssertTrue(listing.text.hasPrefix(listing.title))
         XCTAssertEqual(ListingWriter.listing(for: item, brand: "  ").title, "Manteau enfant · 4 ans")
     }
@@ -159,9 +160,11 @@ final class RecognitionAndListingTests: XCTestCase {
     func testShoppingListAndLot() {
         let need = Need(childID: UUID(), group: .warmShoes, season: .winter, size: 28, missing: 1, familyStock: [])
         XCTAssertEqual(ShoppingList.text(for: "Léo", needs: [need]), "Pour Léo :\n• Bottes : 1 en Pointure 28")
-        let lot = ListingWriter.lot(of: [Fixtures.item(.pants, size: 104), Fixtures.item(.tshirt, size: 110)])
+        let worn = WardrobeItem(ownerID: nil, category: .tshirt, color: .white, size: 110, condition: .good)
+        let lot = ListingWriter.lot(of: [Fixtures.item(.pants, size: 104), worn])
         XCTAssertEqual(lot.title, "Lot de 2 vêtements enfant · 4 ans à 5 ans")
-        XCTAssertTrue(lot.description.contains("• Pantalon marine, 4 ans"))
+        XCTAssertTrue(lot.description.contains("• Pantalon marine, 4 ans\n"))
+        XCTAssertTrue(lot.description.contains("• T-shirt blanc, 5 ans, bon état"))
     }
 
     func testSeasonalEstimate() {

@@ -88,7 +88,7 @@ Deux moments refont la garde-robe d'un enfant : **le passage à la taille suivan
 
 ### Boucle 3 : « Trier et transmettre » (cycle de vie)
 - Mino détecte les vêtements probablement trop petits et propose une **session de tri** à cartes qu'on balaie, d'une minute.
-- Pour chaque pièce, il recommande une destination : **le cadet** (« Pour Inès, dans 5 mois environ »), **les cartons**, **le don** ou **la vente**. Pour la vente, l'annonce est rédigée et prête à partager vers Vinted, Leboncoin ou ailleurs.
+- Pour chaque pièce, il recommande une destination : **le cadet** (« Pour Inès, dans 5 mois environ »), **les cartons**, **le don** ou **la vente**. Pour la vente, il suffit de choisir l'état : Mino rédige l'annonce, partage la photo détourée sur fond blanc avec le texte, et propose de copier séparément le titre et la description pour les champs de Vinted, Leboncoin ou d'ailleurs. Plusieurs pièces se vendent aussi en lot, avec une seule annonce et toutes les photos. Mino ne fixe aucun prix et ne publie rien à la place du parent.
 - « Ça va encore » est une réponse légitime : Mino recale alors son estimation.
 - **Budget : 1 minute pour 10 vêtements.**
 

@@ -255,11 +255,28 @@ private struct FamilySpaceView: View {
     @Query(sort: \Child.createdAt) private var children: [Child]
     @Query(sort: \Garment.createdAt, order: .reverse) private var garments: [Garment]
     @State private var adding = false
+    @State private var composingLot = false
 
     var body: some View {
         let items = scope.visible(garments, profile: nil, filter: .all)
         ScrollView {
-            Group {
+            VStack(alignment: .leading, spacing: 18) {
+                if scope == .forSale && items.count > 1 {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Vendre en lot")
+                                .font(.system(.headline, design: .rounded))
+                                .foregroundStyle(Theme.ink)
+                            Text("Une seule annonce, avec toutes les photos.")
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.secondaryText)
+                        }
+                        Spacer()
+                        Button("Choisir") { composingLot = true }
+                            .buttonStyle(SecondaryButtonStyle())
+                    }
+                    .minoCard()
+                }
                 if items.isEmpty {
                     EmptyStateView(symbol: "shippingbox", title: "Rien pour l'instant", message: scope.emptyMessage) {
                         if scope.acceptsNewGarments {
@@ -274,6 +291,7 @@ private struct FamilySpaceView: View {
             .padding(20)
             .padding(.bottom, 72)
         }
+        .sheet(isPresented: $composingLot) { LotComposerView(garments: items) }
         .background(Theme.background)
         .navigationTitle(scope.title)
         .navigationBarTitleDisplayMode(.inline)
@@ -288,6 +306,63 @@ private struct FamilySpaceView: View {
                     .navigationTitle("Pour les cartons")
                     .navigationBarTitleDisplayMode(.inline)
             }
+        }
+    }
+}
+
+/// Picks garments for sale and shares them as one lot: one text, every photo.
+private struct LotComposerView: View {
+    let garments: [Garment]
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var selection: Set<UUID> = []
+    @State private var sharing: ListingShare?
+
+    var body: some View {
+        let chosen = garments.filter { selection.contains($0.id) }
+        NavigationStack {
+            ScrollView {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 14) {
+                    ForEach(garments) { garment in
+                        let isSelected = selection.contains(garment.id)
+                        Button {
+                            if isSelected { selection.remove(garment.id) } else { selection.insert(garment.id) }
+                        } label: {
+                            GarmentImage(photo: garment.photo)
+                                .aspectRatio(1, contentMode: .fit)
+                                .overlay(alignment: .topTrailing) {
+                                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                        .font(.title3)
+                                        .foregroundStyle(isSelected ? Theme.accent : Theme.secondaryText)
+                                        .background(Circle().fill(Theme.card))
+                                        .padding(6)
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(garment.summary)
+                        .accessibilityAddTraits(isSelected ? .isSelected : [])
+                    }
+                }
+                .padding(20)
+            }
+            .background(Theme.background)
+            .navigationTitle("Vendre en lot")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Fermer") { dismiss() }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button("Partager le lot de \(Formatting.count(chosen.count, "vêtement", "vêtements"))") {
+                    sharing = ListingShare(text: ListingWriter.lot(of: chosen.map(\.item)).text, photos: chosen.map(\.photo))
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(chosen.count < 2)
+                .padding(20)
+                .background(.bar)
+            }
+            .sheet(item: $sharing) { ShareSheet(share: $0) }
         }
     }
 }

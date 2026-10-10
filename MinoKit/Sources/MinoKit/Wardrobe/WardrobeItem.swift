@@ -12,6 +12,20 @@ public enum Occasion: String, CaseIterable, Codable, Sendable {
     }
 }
 
+/// The condition resale platforms ask for, in their usual words.
+public enum Condition: String, CaseIterable, Codable, Sendable {
+    case newWithTags, veryGood, good, fair
+
+    public var displayName: String {
+        switch self {
+        case .newWithTags: return "Neuf avec étiquette"
+        case .veryGood: return "Très bon état"
+        case .good: return "Bon état"
+        case .fair: return "Satisfaisant"
+        }
+    }
+}
+
 /// Where a garment is in its life.
 public enum LifecycleState: String, CaseIterable, Codable, Sendable {
     /// In a child's wardrobe.
@@ -44,6 +58,8 @@ public struct WardrobeItem: Identifiable, Equatable, Sendable {
     public let affinity: Double
     /// Child measurement (stature or shoe size) at which the parent confirmed it still fits.
     public let fitConfirmedAt: Double?
+    /// Asked only when the garment is put up for sale.
+    public let condition: Condition?
 
     public init(
         id: UUID = UUID(),
@@ -55,7 +71,8 @@ public struct WardrobeItem: Identifiable, Equatable, Sendable {
         state: LifecycleState = .active,
         lastWornAt: Date? = nil,
         affinity: Double = 0,
-        fitConfirmedAt: Double? = nil
+        fitConfirmedAt: Double? = nil,
+        condition: Condition? = nil
     ) {
         self.id = id
         self.ownerID = ownerID
@@ -67,6 +84,7 @@ public struct WardrobeItem: Identifiable, Equatable, Sendable {
         self.lastWornAt = lastWornAt
         self.affinity = affinity
         self.fitConfirmedAt = fitConfirmedAt
+        self.condition = condition
     }
 
     /// The same garment, counted as worn on `date` (an outfit planned for an earlier day),
@@ -75,7 +93,7 @@ public struct WardrobeItem: Identifiable, Equatable, Sendable {
         let latest = lastWornAt.map { max($0, date) } ?? date
         return WardrobeItem(
             id: id, ownerID: ownerID, category: category, color: color, size: size, occasion: occasion,
-            state: state, lastWornAt: latest, affinity: affinity, fitConfirmedAt: fitConfirmedAt
+            state: state, lastWornAt: latest, affinity: affinity, fitConfirmedAt: fitConfirmedAt, condition: condition
         )
     }
 }

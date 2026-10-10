@@ -13,6 +13,7 @@ struct SortSessionView: View {
     @State private var index = 0
     @State private var decisions: [String] = []
     @State private var listedForSale: [Garment] = []
+    @State private var sharing: ListingShare?
     @State private var dragOffset: CGSize = .zero
 
     var body: some View {
@@ -29,6 +30,7 @@ struct SortSessionView: View {
             .background(Theme.background)
             .navigationTitle(index < garments.count ? "Tri \(index + 1)/\(garments.count)" : "Tri terminé")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(item: $sharing) { ShareSheet(share: $0) }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Fermer") { dismiss() }
@@ -133,8 +135,9 @@ struct SortSessionView: View {
                 }
             }
             if listedForSale.count > 1 {
-                let lot = ListingWriter.lot(of: listedForSale.map(\.item))
-                ShareLink(item: lot.text, subject: Text(lot.title)) {
+                Button {
+                    sharing = ListingShare(text: ListingWriter.lot(of: listedForSale.map(\.item)).text, photos: listedForSale.map(\.photo))
+                } label: {
                     Label("Partager en un seul lot", systemImage: "square.and.arrow.up")
                 }
                 .buttonStyle(SecondaryButtonStyle())

@@ -18,6 +18,7 @@ public enum ListingWriter {
             .compactMap { $0 }
             .joined(separator: " · ")
         var lines = ["Taille : \(size)", "Couleur : \(item.color.displayName)"]
+        if let condition = item.condition { lines.append("État : \(condition.displayName)") }
         if let brandName { lines.append("Marque : \(brandName)") }
         switch item.occasion {
         case .dressy: lines.append("Idéal pour les fêtes")
@@ -42,7 +43,11 @@ public enum ListingWriter {
         }
         let title = ["Lot de \(items.count) vêtements enfant", sizeLabel].compactMap { $0 }.joined(separator: " · ")
         let lines = items.map { item in
-            "• \(item.category.displayName) \(item.color.displayName.lowercased()), \(SizeChart.shortLabel(size: item.size, kind: item.category.sizeKind))"
+            ["• \(item.category.displayName) \(item.color.displayName.lowercased())",
+             SizeChart.shortLabel(size: item.size, kind: item.category.sizeKind),
+             item.condition?.displayName.lowercased()]
+                .compactMap { $0 }
+                .joined(separator: ", ")
         }
         return Listing(
             title: title,

@@ -35,6 +35,7 @@ targets:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
         NSCameraUsageDescription: "Mino utilise l'appareil photo pour ajouter les vêtements de vos enfants et lire leurs étiquettes. Les photos restent sur votre iPhone."
+        NSPhotoLibraryAddUsageDescription: "Mino enregistre dans Photos les images de vos annonces, uniquement quand vous le demandez."
         NSLocationWhenInUseUsageDescription: "Mino utilise votre position approximative pour adapter les tenues à la météo. Elle n'est jamais enregistrée."
     settings:
       base:

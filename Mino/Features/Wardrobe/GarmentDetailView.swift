@@ -11,6 +11,7 @@ struct GarmentDetailView: View {
     @Query(sort: \Child.createdAt) private var children: [Child]
     @State private var confirmingDeletion = false
     @State private var lastChange: LifecycleChange?
+    @State private var sharing: ListingShare?
 
     /// What a lifecycle action replaced, so the confirmation can offer to undo it.
     private struct LifecycleChange {
@@ -47,6 +48,7 @@ struct GarmentDetailView: View {
         .navigationTitle(garment.category.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .overlay(alignment: .bottom) { confirmation }
+        .sheet(item: $sharing) { ShareSheet(share: $0) }
         .sensoryFeedback(.success, trigger: lastChange?.id)
         .confirmationDialog("Supprimer ce vêtement ?", isPresented: $confirmingDeletion, titleVisibility: .visible) {
             Button("Supprimer", role: .destructive) {
@@ -119,17 +121,7 @@ struct GarmentDetailView: View {
             }
 
             if garment.state == .forSale {
-                let listing = ListingWriter.listing(for: garment.item, brand: garment.brand)
-                HStack(spacing: 10) {
-                    ShareLink(item: listing.text, subject: Text(listing.title)) {
-                        Label("Partager l'annonce", systemImage: "square.and.arrow.up")
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                    Button("Vendu", systemImage: "checkmark.seal") {
-                        change("Vendu ! Il reste visible dans les Archives.") { garment.move(to: .sold, owner: nil) }
-                    }
-                    .buttonStyle(SecondaryButtonStyle())
-                }
+                saleListing
             }
 
             group("Dans la famille") {
@@ -182,6 +174,44 @@ struct GarmentDetailView: View {
             }
         }
         .minoCard()
+    }
+
+    /// Everything needed to publish on any resale app in under a minute.
+    private var saleListing: some View {
+        let listing = ListingWriter.listing(for: garment.item, brand: garment.brand)
+        return VStack(alignment: .leading, spacing: 12) {
+            group("État du vêtement") {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(Condition.allCases, id: \.self) { condition in
+                            Chip(title: condition.displayName, isSelected: garment.condition == condition) {
+                                garment.condition = condition
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 2)
+                }
+            }
+            Button {
+                sharing = ListingShare(text: listing.text, photos: [garment.photo])
+            } label: {
+                Label("Partager la photo et l'annonce", systemImage: "square.and.arrow.up")
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            HStack(spacing: 10) {
+                CopyButton(title: "Copier le titre", text: listing.title)
+                CopyButton(title: "Copier le texte", text: listing.description)
+            }
+            Text("Dans l'app de revente : ajoutez la photo, collez le titre et le texte, fixez votre prix.")
+                .font(.footnote)
+                .foregroundStyle(Theme.secondaryText)
+            Button("C'est vendu", systemImage: "checkmark.seal") {
+                change("Vendu ! Il reste visible dans les Archives.") { garment.move(to: .sold, owner: nil) }
+            }
+            .buttonStyle(SecondaryButtonStyle())
+        }
+        .padding(14)
+        .background(Theme.background, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private func group<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
