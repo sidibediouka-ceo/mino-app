@@ -31,6 +31,14 @@ xcodegen            # génère Mino.xcodeproj, Info.plist et les entitlements
 open Mino.xcodeproj
 ```
 
+**Équipe de signature, une seule fois :** créez `Config/Local.xcconfig` avec votre identifiant d'équipe Apple (10 caractères, visible sur developer.apple.com › Membership) :
+
+```sh
+echo 'DEVELOPMENT_TEAM = ABCDE12345' > Config/Local.xcconfig
+```
+
+Ce fichier n'est pas versionné et `xcodegen` le relie au projet : l'équipe n'est plus perdue à chaque régénération.
+
 Pour la météo, activez la capability **WeatherKit** pour l'identifiant `app.mino.ios` dans le portail Apple Developer, puis choisissez votre équipe dans Xcode. Sans WeatherKit, Mino fonctionne avec une estimation de saison.
 
 ## Tests

@@ -6,6 +6,10 @@ options:
   developmentLanguage: fr
   createIntermediateGroups: true
 
+configFiles:
+  Debug: Config/Mino.xcconfig
+  Release: Config/Mino.xcconfig
+
 settings:
   base:
     SWIFT_VERSION: "5.0"
