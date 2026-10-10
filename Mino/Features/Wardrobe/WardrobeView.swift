@@ -12,13 +12,15 @@ struct WardrobeView: View {
     @State private var adding = false
     @State private var sortBatch: SortBatch?
     @State private var handMeDownFor: Child?
+    /// Every screen of the tab is pushed by value on this one path.
+    @State private var path = NavigationPath()
 
     private var child: Child? {
         children.first { $0.id == selectedChildID } ?? children.first
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     if children.count > 1 {
@@ -39,11 +41,10 @@ struct WardrobeView: View {
             .navigationDestination(for: Garment.self) { GarmentDetailView(garment: $0) }
             .navigationDestination(for: CategoryPage.self) { CategoryGarmentsView(page: $0) }
             .navigationDestination(for: WardrobeScope.self) { FamilySpaceView(scope: $0) }
+            .navigationDestination(for: FamilyHubRoute.self) { _ in FamilyHubView() }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        FamilyHubView()
-                    } label: {
+                    Button { path.append(FamilyHubRoute()) } label: {
                         Label("Famille", systemImage: "shippingbox")
                             .labelStyle(.titleAndIcon)
                             .font(.system(.subheadline, design: .rounded).weight(.semibold))
@@ -514,6 +515,9 @@ enum FitFilter: CaseIterable {
         }
     }
 }
+
+/// Navigation value for the family hub (boxes, items for sale, archives).
+struct FamilyHubRoute: Hashable {}
 
 /// Navigation value for a category's full list.
 struct CategoryPage: Hashable {

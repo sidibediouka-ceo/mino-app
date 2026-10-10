@@ -146,6 +146,12 @@ final class RoutineAndLearningTests: XCTestCase {
         XCTAssertEqual(WeeklyRoutine(rawValue: "garbage;9=x").rawValue, "")
     }
 
+    func testOnlyMeaningfulContextsAreOffered() {
+        XCTAssertEqual(DayContext.offered(for: [.everyday], current: .school), [.school, .outing, .home])
+        XCTAssertEqual(DayContext.offered(for: [.everyday, .sport], current: .school), [.school, .sport, .outing, .home])
+        XCTAssertEqual(DayContext.offered(for: [.everyday], current: .celebration), [.school, .outing, .celebration, .home])
+    }
+
     func testAffinityChanges() {
         let kept = UUID(), rejected = UUID(), chosen = UUID()
         let changes = PreferenceLearning.affinityChanges(

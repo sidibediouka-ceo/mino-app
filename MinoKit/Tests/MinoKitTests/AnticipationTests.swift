@@ -151,7 +151,7 @@ final class RecognitionAndListingTests: XCTestCase {
         let listing = ListingWriter.listing(for: item, brand: "Petit Bateau")
         XCTAssertEqual(listing.title, "Manteau enfant · 4 ans · Petit Bateau")
         XCTAssertTrue(listing.description.contains("Taille : 4 ans · 104 cm"))
-        XCTAssertTrue(listing.description.contains("Style : habillé"))
+        XCTAssertTrue(listing.description.contains("Idéal pour les fêtes"))
         XCTAssertTrue(listing.text.hasPrefix(listing.title))
         XCTAssertEqual(ListingWriter.listing(for: item, brand: "  ").title, "Manteau enfant · 4 ans")
     }

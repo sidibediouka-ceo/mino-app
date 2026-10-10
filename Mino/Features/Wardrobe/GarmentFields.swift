@@ -66,15 +66,13 @@ struct GarmentFields: View {
                     }
                 }
             }
+            field("Pour quelles journées ?") {
+                ChipPicker(options: Occasion.allCases, selection: $occasion, title: \.displayName)
+            }
             DisclosureGroup("Plus de détails") {
-                VStack(alignment: .leading, spacing: 20) {
-                    field("Occasion") {
-                        ChipPicker(options: Occasion.allCases, selection: $occasion, title: \.displayName)
-                    }
-                    field("Marque") {
-                        TextField("Ex. Petit Bateau", text: $brand)
-                            .textFieldStyle(.roundedBorder)
-                    }
+                field("Marque") {
+                    TextField("Ex. Petit Bateau", text: $brand)
+                        .textFieldStyle(.roundedBorder)
                 }
                 .padding(.top, 12)
             }

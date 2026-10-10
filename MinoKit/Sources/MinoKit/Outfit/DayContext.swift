@@ -14,6 +14,19 @@ public enum DayContext: String, CaseIterable, Codable, Sendable {
         }
     }
 
+    /// The contexts worth offering: school, outing and home always change the outfit (coat,
+    /// shoes); sport and celebration only once some garments are tagged for them.
+    /// The current context is always kept, so a learned routine never disappears.
+    public static func offered(for occasions: Set<Occasion>, current: DayContext) -> [DayContext] {
+        allCases.filter { context in
+            switch context {
+            case .school, .outing, .home: return true
+            case .sport: return occasions.contains(.sport) || context == current
+            case .celebration: return occasions.contains(.dressy) || context == current
+            }
+        }
+    }
+
     func occasionScore(_ occasion: Occasion) -> Double {
         switch (self, occasion) {
         case (.sport, .sport): return 1.5

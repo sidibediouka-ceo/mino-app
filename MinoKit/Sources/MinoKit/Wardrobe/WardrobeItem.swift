@@ -5,8 +5,8 @@ public enum Occasion: String, CaseIterable, Codable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .everyday: return "Quotidien"
-        case .dressy: return "Habillé"
+        case .everyday: return "Tous les jours"
+        case .dressy: return "Fête"
         case .sport: return "Sport"
         }
     }

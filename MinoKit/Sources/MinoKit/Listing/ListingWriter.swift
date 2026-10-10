@@ -19,7 +19,11 @@ public enum ListingWriter {
             .joined(separator: " · ")
         var lines = ["Taille : \(size)", "Couleur : \(item.color.displayName)"]
         if let brandName { lines.append("Marque : \(brandName)") }
-        if item.occasion != .everyday { lines.append("Style : \(item.occasion.displayName.lowercased())") }
+        switch item.occasion {
+        case .dressy: lines.append("Idéal pour les fêtes")
+        case .sport: lines.append("Idéal pour le sport")
+        case .everyday: break
+        }
         lines.append("")
         lines.append("Il a fait son temps chez nous et attend une seconde vie.")
         return Listing(title: title, description: lines.joined(separator: "\n"))

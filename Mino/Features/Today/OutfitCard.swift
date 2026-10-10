@@ -123,9 +123,15 @@ struct OutfitCard: View {
         }
     }
 
+    /// Sport and Fête appear once some of the child's garments are tagged for them.
+    private var offeredContexts: [DayContext] {
+        let occasions = Set(family.items.filter { $0.ownerID == child.id && $0.state == .active }.map(\.occasion))
+        return DayContext.offered(for: occasions, current: plan.context)
+    }
+
     private var contextMenu: some View {
         Menu {
-            ForEach(DayContext.allCases, id: \.self) { option in
+            ForEach(offeredContexts, id: \.self) { option in
                 Button { onContext(option) } label: {
                     if option == plan.context {
                         Label(option.displayName, systemImage: "checkmark")
