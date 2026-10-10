@@ -1,0 +1,7 @@
+// Shared build settings for every target.
+// Your signing team lives in Config/Local.xcconfig (not versioned), so regenerating the project
+// with XcodeGen never loses it. Create it once:
+//   echo 'DEVELOPMENT_TEAM = VOTRE_TEAM_ID' > Config/Local.xcconfig
+#include? "Local.xcconfig"
+
+CODE_SIGN_STYLE = Automatic
