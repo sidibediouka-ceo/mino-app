@@ -21,7 +21,7 @@ struct SettingsView: View {
                                 ChildAvatar(name: child.name, color: children.color(of: child), size: 32)
                                 Text(child.name).foregroundStyle(Theme.ink)
                                 Spacer()
-                                Text(Formatting.age(of: child.birthDate)).foregroundStyle(Theme.secondaryText)
+                                Text(Formatting.age(months: child.ageInMonths)).foregroundStyle(Theme.secondaryText)
                             }
                         }
                     }

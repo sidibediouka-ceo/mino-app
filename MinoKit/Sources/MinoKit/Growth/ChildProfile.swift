@@ -16,26 +16,31 @@ public struct GrowthRecord: Equatable, Sendable {
     }
 }
 
-/// Everything Mino needs to know about a child to reason about their wardrobe.
+/// Everything Mino needs to know about a child to reason about their wardrobe, and no more:
+/// a first name (or nickname), an age and sizes. No date of birth, no sex.
 public struct ChildProfile: Identifiable, Equatable, Sendable {
     public let id: UUID
     public let name: String
-    public let birthDate: Date
-    public let sex: Sex
+    /// Derived from the age the parent gave ("4 ans"); only ever approximate.
+    public let estimatedBirth: Date
     public let records: [GrowthRecord]
 
-    public init(id: UUID, name: String, birthDate: Date, sex: Sex, records: [GrowthRecord]) {
+    public init(id: UUID, name: String, estimatedBirth: Date, records: [GrowthRecord]) {
         self.id = id
         self.name = name
-        self.birthDate = birthDate
-        self.sex = sex
+        self.estimatedBirth = estimatedBirth
         self.records = records.sorted { $0.date < $1.date }
+    }
+
+    /// The estimated birth of a child who was `ageInMonths` old on `date`.
+    public static func estimatedBirth(ageInMonths: Int, on date: Date) -> Date {
+        date.addingTimeInterval(-Double(ageInMonths) * secondsPerMonth)
     }
 
     static let secondsPerMonth = 30.436_875 * 86_400
 
     public func ageInMonths(at date: Date) -> Double {
-        max(0, date.timeIntervalSince(birthDate) / Self.secondsPerMonth)
+        max(0, date.timeIntervalSince(estimatedBirth) / Self.secondsPerMonth)
     }
 
     /// The date of the last real (not inferred) height measurement.
@@ -49,13 +54,13 @@ public struct ChildProfile: Identifiable, Equatable, Sendable {
     /// relative to the WHO reference. Uncertainty widens with distance from the last record.
     public func height(at date: Date) -> Estimate {
         let age = ageInMonths(at: date)
-        let median = GrowthReference.medianStature(ageMonths: age, sex: sex)
+        let median = GrowthReference.medianStature(ageMonths: age)
         let deviation = GrowthReference.statureStandardDeviation(ageMonths: age)
         guard let anchor = records.last(where: { $0.heightCM != nil }), let anchorHeight = anchor.heightCM else {
             return Estimate(expected: median, low: median - deviation, high: median + deviation)
         }
         let anchorAge = ageInMonths(at: anchor.date)
-        let anchorMedian = GrowthReference.medianStature(ageMonths: anchorAge, sex: sex)
+        let anchorMedian = GrowthReference.medianStature(ageMonths: anchorAge)
         let anchorDeviation = GrowthReference.statureStandardDeviation(ageMonths: anchorAge)
         let zScore = (anchorHeight - anchorMedian) / anchorDeviation
         var expected = median + zScore * deviation

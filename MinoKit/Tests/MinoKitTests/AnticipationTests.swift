@@ -71,7 +71,7 @@ final class BriefingTests: XCTestCase {
         let outgrown = Fixtures.item(.pants, size: 92)
         let boxed = Fixtures.item(.coat, owner: nil, size: 110, state: .stored)
         let need = Need(childID: leo.id, group: .warmOuterwear, season: .winter, neededBy: Fixtures.today, size: 110, missing: 1, familyStock: [boxed.id])
-        let unmeasured = ChildProfile(id: UUID(), name: "A", birthDate: Fixtures.date(2022, 1, 1), sex: .girl, records: [])
+        let unmeasured = ChildProfile(id: UUID(), name: "A", estimatedBirth: Fixtures.date(2022, 1, 1), records: [])
         let briefing = Briefing.compose(family: [unmeasured, leo], items: [outgrown, boxed], needs: [need], on: Fixtures.today)
         XCTAssertEqual(briefing, [.sort(childID: leo.id, itemIDs: [outgrown.id]), .retrieve(need), .measure(childID: unmeasured.id)])
         XCTAssertEqual(briefing.map(\.childID), [leo.id, leo.id, unmeasured.id])

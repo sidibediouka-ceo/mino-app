@@ -8,8 +8,9 @@ import SwiftData
 final class Child {
     var id: UUID = UUID()
     var name: String = ""
-    var birthDate: Date = Date.now
-    var sexRaw: String = Sex.unspecified.rawValue
+    /// The age the parent gave, and when. Mino never asks for a date of birth.
+    var ageInMonthsAtEntry: Int = 0
+    var ageEnteredAt: Date = Date.now
     var createdAt: Date = Date.now
     /// The learned weekly routine, see `WeeklyRoutine`.
     var routineRaw: String = ""
@@ -23,15 +24,18 @@ final class Child {
     @Relationship(deleteRule: .cascade, inverse: \PlannedOutfit.child)
     var plans: [PlannedOutfit]? = []
 
-    init(name: String, birthDate: Date, sex: Sex) {
+    init(name: String, ageInMonths: Int) {
         self.name = name
-        self.birthDate = birthDate
-        self.sexRaw = sex.rawValue
+        self.ageInMonthsAtEntry = ageInMonths
     }
 
-    var sex: Sex {
-        get { Sex(rawValue: sexRaw) ?? .unspecified }
-        set { sexRaw = newValue.rawValue }
+    /// Today's age, kept up to date from the age given at entry.
+    var ageInMonths: Int {
+        get { Int(profile.ageInMonths(at: .now)) }
+        set {
+            ageInMonthsAtEntry = newValue
+            ageEnteredAt = .now
+        }
     }
 
     var routine: WeeklyRoutine {
@@ -40,7 +44,11 @@ final class Child {
     }
 
     var profile: ChildProfile {
-        ChildProfile(id: id, name: name, birthDate: birthDate, sex: sex, records: (growthEntries ?? []).map(\.record))
+        ChildProfile(
+            id: id, name: name,
+            estimatedBirth: ChildProfile.estimatedBirth(ageInMonths: ageInMonthsAtEntry, on: ageEnteredAt),
+            records: (growthEntries ?? []).map(\.record)
+        )
     }
 }
 

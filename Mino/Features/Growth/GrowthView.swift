@@ -12,6 +12,7 @@ struct GrowthView: View {
     @State private var selectedID: UUID?
     @State private var measuring: Child?
     @State private var adding: Child?
+    @State private var editing: Child?
     @State private var sortBatch: SortBatch?
 
     private var selected: Child? {
@@ -40,6 +41,21 @@ struct GrowthView: View {
             }
             .background(Theme.background)
             .navigationTitle("Grandir")
+            .toolbar {
+                if let selected {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Modifier") { editing = selected }
+                            .accessibilityLabel("Modifier le profil de \(selected.name)")
+                    }
+                }
+            }
+            .sheet(item: $editing) { child in
+                NavigationStack {
+                    ChildFormView(mode: .edit(child)) { _ in editing = nil }
+                        .navigationTitle(child.name)
+                        .navigationBarTitleDisplayMode(.inline)
+                }
+            }
             .sheet(item: $measuring) { MeasureView(child: $0) }
             .sheet(item: $sortBatch) { SortSessionView(garments: $0.garments, children: children) }
             .sheet(item: $adding) { child in
@@ -263,7 +279,7 @@ private struct GrowthChart: View {
         let now = Date.now
         let calendar = Calendar.current
         let points = (-6...12).compactMap { offset -> Point? in
-            guard let date = calendar.date(byAdding: .month, value: offset, to: now), date >= profile.birthDate else { return nil }
+            guard let date = calendar.date(byAdding: .month, value: offset, to: now), date >= profile.estimatedBirth else { return nil }
             return Point(date: date, estimate: profile.height(at: date))
         }
         let measured = profile.records.filter { $0.heightCM != nil && !$0.isApproximate }

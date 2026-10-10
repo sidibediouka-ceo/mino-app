@@ -52,9 +52,9 @@ struct OutfitCard: View {
                             }
                         }
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 2)
                 }
-                .scrollClipDisabled()
                 .sensoryFeedback(.selection, trigger: plan.piecesRaw)
             }
 

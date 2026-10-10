@@ -2,71 +2,34 @@ import MinoKit
 import SwiftData
 import SwiftUI
 
-/// The visual inventory, per child and for the family boxes.
+/// The visual inventory. Each child has their own dressing; the family spaces (boxes, items
+/// for sale, archives) are shared and live in their own section, below.
 struct WardrobeView: View {
     @Query(sort: \Child.createdAt) private var children: [Child]
     @Query(sort: \Garment.createdAt, order: .reverse) private var garments: [Garment]
-    @State private var scope: WardrobeScope?
+    @State private var selectedChildID: UUID?
     @State private var filter: FitFilter = .all
     @State private var adding = false
     @State private var sortBatch: SortBatch?
 
-    private var currentScope: WardrobeScope {
-        scope ?? children.first.map { .child($0.id) } ?? .boxes
-    }
-
-    private var currentChild: Child? {
-        currentScope.child(in: children)
+    private var child: Child? {
+        children.first { $0.id == selectedChildID } ?? children.first
     }
 
     var body: some View {
-        let profile = currentChild?.profile
-        let outgrown = profile.map { profile in
-            garments.filter { currentScope.contains($0) && profile.fit(of: $0.item, on: .now) == .tooSmall }
-        } ?? []
-        let visible = currentScope.visible(garments, profile: profile, filter: filter)
-
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    ChipPicker(options: scopes, selection: Binding(get: { currentScope }, set: { scope = $0; filter = .all })) { option in
-                        title(of: option)
+                VStack(alignment: .leading, spacing: 22) {
+                    if children.count > 1 {
+                        ChildSelector(children: children, selection: Binding(
+                            get: { child?.id },
+                            set: { selectedChildID = $0; filter = .all }
+                        ))
                     }
-
-                    if profile != nil {
-                        ChipPicker(options: FitFilter.allCases, selection: $filter, title: \.title)
+                    if let child {
+                        childDressing(child)
                     }
-
-                    if !outgrown.isEmpty, let child = currentChild {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(Formatting.count(outgrown.count, "vêtement devenu petit", "vêtements devenus petits"))
-                                    .font(.headline)
-                                    .foregroundStyle(Theme.ink)
-                                Text("Une minute pour leur trouver une suite.")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Theme.secondaryText)
-                            }
-                            Spacer()
-                            Button("Trier") { sortBatch = SortBatch(garments: outgrown) }
-                                .buttonStyle(SecondaryButtonStyle())
-                                .accessibilityHint("Trier les vêtements devenus petits pour \(child.name)")
-                        }
-                        .minoCard()
-                    }
-
-                    if visible.isEmpty {
-                        EmptyStateView(symbol: "hanger", title: emptyTitle, message: emptyMessage) {
-                            if currentScope.acceptsNewGarments && filter == .all {
-                                Button("Ajouter des vêtements", systemImage: "camera.fill") { adding = true }
-                                    .buttonStyle(PrimaryButtonStyle())
-                            }
-                        }
-                    } else {
-                        grid(visible, profile: profile)
-                    }
-
-                    secondLife
+                    familySpaces
                 }
                 .padding(20)
                 .padding(.bottom, 72)
@@ -75,26 +38,19 @@ struct WardrobeView: View {
             .navigationTitle("Dressing")
             .navigationDestination(for: Garment.self) { GarmentDetailView(garment: $0) }
             .navigationDestination(for: CategoryPage.self) { CategoryGarmentsView(page: $0) }
+            .navigationDestination(for: WardrobeScope.self) { FamilySpaceView(scope: $0) }
             .overlay(alignment: .bottomTrailing) {
-                if currentScope.acceptsNewGarments && !visible.isEmpty {
-                    Button { adding = true } label: {
-                        Label("Ajouter", systemImage: "plus")
-                            .font(.system(.headline, design: .rounded))
-                            .padding(.vertical, 14)
-                            .padding(.horizontal, 22)
-                            .foregroundStyle(Theme.onAccent)
-                            .background(Theme.accent, in: Capsule())
-                            .shadow(color: Theme.accent.opacity(0.35), radius: 12, y: 6)
-                    }
-                    .padding(20)
-                    .accessibilityLabel("Ajouter des vêtements")
+                if let child, garments.contains(where: { WardrobeScope.child(child.id).contains($0) }) {
+                    AddButton { adding = true }
                 }
             }
             .sheet(isPresented: $adding) {
-                NavigationStack {
-                    AddGarmentsView(owner: currentChild, sizing: (currentChild ?? children.first)?.profile) { adding = false }
-                        .navigationTitle(currentChild.map { "Pour \($0.name)" } ?? "Pour les cartons")
-                        .navigationBarTitleDisplayMode(.inline)
+                if let child {
+                    NavigationStack {
+                        AddGarmentsView(owner: child, sizing: child.profile) { adding = false }
+                            .navigationTitle("Pour \(child.name)")
+                            .navigationBarTitleDisplayMode(.inline)
+                    }
                 }
             }
             .sheet(item: $sortBatch) { batch in
@@ -103,47 +59,209 @@ struct WardrobeView: View {
         }
     }
 
-    private var scopes: [WardrobeScope] {
-        var scopes = children.map { WardrobeScope.child($0.id) } + [.boxes]
-        if garments.contains(where: { $0.state == .forSale }) { scopes.append(.forSale) }
-        if garments.contains(where: { WardrobeScope.archive.contains($0) }) { scopes.append(.archive) }
-        return scopes
-    }
+    // MARK: Child
 
-    private func title(of scope: WardrobeScope) -> String {
-        switch scope {
-        case .child(let id): return children.first { $0.id == id }?.name ?? ""
-        case .boxes: return "Cartons"
-        case .forSale: return "À vendre"
-        case .archive: return "Archives"
+    @ViewBuilder
+    private func childDressing(_ child: Child) -> some View {
+        let scope = WardrobeScope.child(child.id)
+        let profile = child.profile
+        let outgrown = garments.filter { scope.contains($0) && profile.fit(of: $0.item, on: .now) == .tooSmall }
+        let visible = scope.visible(garments, profile: profile, filter: filter)
+
+        ChipPicker(options: FitFilter.allCases, selection: $filter, title: \.title)
+
+        if !outgrown.isEmpty {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(Formatting.count(outgrown.count, "vêtement devenu petit", "vêtements devenus petits"))
+                        .font(.system(.headline, design: .rounded))
+                        .foregroundStyle(Theme.ink)
+                    Text("Une minute pour leur trouver une suite.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                Spacer()
+                Button("Trier") { sortBatch = SortBatch(garments: outgrown) }
+                    .buttonStyle(SecondaryButtonStyle())
+                    .accessibilityHint("Trier les vêtements devenus petits pour \(child.name)")
+            }
+            .minoCard()
+        }
+
+        if visible.isEmpty {
+            EmptyStateView(
+                symbol: "hanger",
+                title: filter == .all ? "Le dressing de \(child.name) est vide" : "Rien ici",
+                message: filter == .all ? "Quelques photos suffisent pour commencer." : "Aucun vêtement ne correspond à ce filtre."
+            ) {
+                if filter == .all {
+                    Button("Ajouter des vêtements", systemImage: "camera.fill") { adding = true }
+                        .buttonStyle(PrimaryButtonStyle())
+                } else {
+                    Button("Voir tout le dressing") { filter = .all }
+                        .buttonStyle(SecondaryButtonStyle())
+                }
+            }
+        } else {
+            WardrobeSections(garments: visible, profile: profile, scope: scope, filter: filter)
         }
     }
 
-    private var emptyTitle: String {
-        switch currentScope {
-        case .child: return filter == .all ? "Le dressing est vide" : "Rien ici"
-        case .boxes: return "Aucun carton"
-        case .forSale: return "Rien à vendre"
-        case .archive: return "Aucune archive"
+    // MARK: Family
+
+    private var familySpaces: some View {
+        let boxes = garments.filter { WardrobeScope.boxes.contains($0) }.count
+        let forSale = garments.filter { WardrobeScope.forSale.contains($0) }.count
+        let archived = garments.filter { WardrobeScope.archive.contains($0) }.count
+        let secondLife = garments.filter { $0.state.hasLeftFamily }.count
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Pour toute la famille")
+                .font(.system(.title3, design: .rounded).weight(.bold))
+                .foregroundStyle(Theme.ink)
+                .padding(.top, 8)
+            FamilySpaceRow(
+                scope: .boxes, symbol: "shippingbox.fill", count: boxes,
+                subtitle: "Pour plus tard ou pour les plus jeunes"
+            )
+            if forSale > 0 {
+                FamilySpaceRow(scope: .forSale, symbol: "tag.fill", count: forSale, subtitle: "Annonces prêtes à partager")
+            }
+            if archived > 0 {
+                FamilySpaceRow(
+                    scope: .archive, symbol: "leaf.fill", count: archived,
+                    subtitle: secondLife > 0
+                        ? "\(Formatting.count(secondLife, "vêtement a", "vêtements ont")) trouvé une seconde vie"
+                        : "Souvenirs gardés"
+                )
+            }
         }
     }
+}
 
-    private var emptyMessage: String {
-        switch currentScope {
-        case .child: return filter == .all ? "Touchez + pour ajouter quelques photos." : "Aucun vêtement ne correspond à ce filtre."
-        case .boxes: return "Les vêtements rangés pour plus tard ou pour un plus petit apparaîtront ici."
-        case .forSale: return "Mettez un vêtement en vente depuis sa fiche : l'annonce est rédigée pour vous."
-        case .archive: return "Les vêtements donnés, vendus ou gardés en souvenir restent consultables ici."
+/// A child picker with each child's avatar and colour.
+private struct ChildSelector: View {
+    let children: [Child]
+    @Binding var selection: UUID?
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(children) { child in
+                    let isSelected = child.id == selection
+                    let color = children.color(of: child)
+                    Button { selection = child.id } label: {
+                        HStack(spacing: 8) {
+                            ChildAvatar(name: child.name, color: color, size: 30)
+                            Text(child.name)
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(Theme.ink)
+                        }
+                        .padding(.vertical, 6)
+                        .padding(.leading, 6)
+                        .padding(.trailing, 14)
+                        .background(isSelected ? color.opacity(0.22) : Theme.card, in: Capsule())
+                        .overlay(Capsule().strokeBorder(isSelected ? color : .clear, lineWidth: 2))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+            }
+            .padding(2)
         }
     }
+}
 
-    /// Three garments per category keep every category within reach; "Voir tout" opens the rest.
-    private func grid(_ items: [Garment], profile: ChildProfile?) -> some View {
+private struct FamilySpaceRow: View {
+    let scope: WardrobeScope
+    let symbol: String
+    let count: Int
+    let subtitle: String
+
+    var body: some View {
+        NavigationLink(value: scope) {
+            HStack(spacing: 14) {
+                Image(systemName: symbol)
+                    .font(.title3)
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 44, height: 44)
+                    .background(Theme.chip, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(scope.title) · \(count)")
+                        .font(.system(.headline, design: .rounded))
+                        .foregroundStyle(Theme.ink)
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(Theme.secondaryText)
+            }
+            .minoCard(padding: 14)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// A shared family space: boxes, items for sale or archives.
+private struct FamilySpaceView: View {
+    let scope: WardrobeScope
+
+    @Query(sort: \Child.createdAt) private var children: [Child]
+    @Query(sort: \Garment.createdAt, order: .reverse) private var garments: [Garment]
+    @State private var adding = false
+
+    var body: some View {
+        let items = scope.visible(garments, profile: nil, filter: .all)
+        ScrollView {
+            Group {
+                if items.isEmpty {
+                    EmptyStateView(symbol: "shippingbox", title: "Rien pour l'instant", message: scope.emptyMessage) {
+                        if scope.acceptsNewGarments {
+                            Button("Ajouter aux cartons", systemImage: "camera.fill") { adding = true }
+                                .buttonStyle(PrimaryButtonStyle())
+                        }
+                    }
+                } else {
+                    WardrobeSections(garments: items, profile: nil, scope: scope, filter: .all)
+                }
+            }
+            .padding(20)
+            .padding(.bottom, 72)
+        }
+        .background(Theme.background)
+        .navigationTitle(scope.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .overlay(alignment: .bottomTrailing) {
+            if scope.acceptsNewGarments && !items.isEmpty {
+                AddButton { adding = true }
+            }
+        }
+        .sheet(isPresented: $adding) {
+            NavigationStack {
+                AddGarmentsView(owner: nil, sizing: children.first?.profile) { adding = false }
+                    .navigationTitle("Pour les cartons")
+                    .navigationBarTitleDisplayMode(.inline)
+            }
+        }
+    }
+}
+
+/// Garments grouped by category. Three per category keep every category within reach;
+/// "Voir tout" opens the rest.
+private struct WardrobeSections: View {
+    let garments: [Garment]
+    let profile: ChildProfile?
+    let scope: WardrobeScope
+    let filter: FitFilter
+
+    private static let previewCount = 3
+
+    var body: some View {
         let groups = GarmentCategory.allCases.compactMap { category -> (GarmentCategory, [Garment])? in
-            let matching = items.filter { $0.category == category }
+            let matching = garments.filter { $0.category == category }
             return matching.isEmpty ? nil : (category, matching)
         }
-        return VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 22) {
             ForEach(groups, id: \.0) { group in
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
@@ -152,7 +270,7 @@ struct WardrobeView: View {
                             .foregroundStyle(Theme.ink)
                         Spacer()
                         if group.1.count > Self.previewCount {
-                            NavigationLink(value: CategoryPage(category: group.0, scope: currentScope, filter: filter)) {
+                            NavigationLink(value: CategoryPage(category: group.0, scope: scope, filter: filter)) {
                                 HStack(spacing: 2) {
                                     Text("Voir tout")
                                     Image(systemName: "chevron.right").font(.caption.weight(.bold))
@@ -165,23 +283,6 @@ struct WardrobeView: View {
                     GarmentGrid(garments: Array(group.1.prefix(Self.previewCount)), profile: profile)
                 }
             }
-        }
-    }
-
-    private static let previewCount = 3
-
-    @ViewBuilder
-    private var secondLife: some View {
-        let count = garments.filter { $0.state.hasLeftFamily }.count
-        if count > 0 && currentScope != .archive {
-            Button { scope = .archive } label: {
-                Label("\(Formatting.count(count, "vêtement a", "vêtements ont")) trouvé une seconde vie", systemImage: "leaf.fill")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Theme.secondaryText)
-            }
-            .buttonStyle(.plain)
-            .frame(maxWidth: .infinity)
-            .padding(.top, 8)
         }
     }
 }
@@ -265,12 +366,49 @@ private struct GarmentTile: View {
     }
 }
 
+/// The floating "Ajouter" button.
+private struct AddButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label("Ajouter", systemImage: "plus")
+                .font(.system(.headline, design: .rounded))
+                .padding(.vertical, 14)
+                .padding(.horizontal, 22)
+                .foregroundStyle(Theme.onAccent)
+                .background(Theme.accent, in: Capsule())
+                .shadow(color: Theme.accent.opacity(0.3), radius: 12, y: 6)
+        }
+        .padding(20)
+        .accessibilityLabel("Ajouter des vêtements")
+    }
+}
+
 enum WardrobeScope: Hashable {
     case child(UUID)
     case boxes
     case forSale
     /// Donated, sold and keepsakes: nothing is ever lost.
     case archive
+
+    var title: String {
+        switch self {
+        case .child: return "Dressing"
+        case .boxes: return "Cartons"
+        case .forSale: return "À vendre"
+        case .archive: return "Archives"
+        }
+    }
+
+    var emptyMessage: String {
+        switch self {
+        case .child: return "Quelques photos suffisent pour commencer."
+        case .boxes: return "Les vêtements rangés pour plus tard ou pour un plus petit apparaîtront ici."
+        case .forSale: return "Mettez un vêtement en vente depuis sa fiche : l'annonce est rédigée pour vous."
+        case .archive: return "Les vêtements donnés, vendus ou gardés en souvenir restent consultables ici."
+        }
+    }
 
     func contains(_ garment: Garment) -> Bool {
         switch self {
@@ -296,10 +434,7 @@ enum WardrobeScope: Hashable {
     }
 
     var acceptsNewGarments: Bool {
-        switch self {
-        case .child, .boxes: return true
-        case .forSale, .archive: return false
-        }
+        self == .boxes
     }
 }
 

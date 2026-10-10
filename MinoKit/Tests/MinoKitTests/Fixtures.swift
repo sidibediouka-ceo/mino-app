@@ -16,13 +16,13 @@ enum Fixtures {
 
     /// A four-year-old boy measured at 104 cm today and wearing shoe size 27.
     static let leo = ChildProfile(
-        id: UUID(), name: "Léo", birthDate: date(2022, 10, 10), sex: .boy,
+        id: UUID(), name: "Léo", estimatedBirth: date(2022, 10, 10),
         records: [GrowthRecord(date: today, heightCM: 104, shoeSize: 27)]
     )
 
     /// His little sister, two years old, 86 cm.
     static let ines = ChildProfile(
-        id: UUID(), name: "Inès", birthDate: date(2024, 9, 1), sex: .girl,
+        id: UUID(), name: "Inès", estimatedBirth: date(2024, 9, 1),
         records: [GrowthRecord(date: today, heightCM: 86, shoeSize: 22)]
     )
 

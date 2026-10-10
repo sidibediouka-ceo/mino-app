@@ -92,11 +92,12 @@ enum Formatting {
         "\(value) \(value > 1 ? plural : singular)"
     }
 
-    /// "18 mois", "4 ans".
-    static func age(of birthDate: Date, calendar: Calendar = .current) -> String {
-        let components = calendar.dateComponents([.year, .month], from: birthDate, to: .now)
-        let years = components.year ?? 0
-        if years >= 2 { return "\(years) ans" }
-        return "\(years * 12 + (components.month ?? 0)) mois"
+    /// "Moins d'un mois", "18 mois", "4 ans".
+    static func age(months: Int) -> String {
+        switch months {
+        case ..<1: return "Moins d'un mois"
+        case ..<24: return "\(months) mois"
+        default: return "\(months / 12) ans"
+        }
     }
 }

@@ -2,8 +2,8 @@ import MinoKit
 import SwiftData
 import SwiftUI
 
-/// Creates or edits a child. On creation we ask for the size on the label of the clothes the
-/// child wears now, which parents know, rather than a stature in centimetres, which they rarely do.
+/// Creates or edits a child with the minimum Mino needs: a first name or nickname, an age and
+/// the sizes on the labels of the clothes the child wears now. No date of birth, no sex.
 struct ChildFormView: View {
     enum Mode {
         case create
@@ -16,12 +16,18 @@ struct ChildFormView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
-    @State private var birthDate = Calendar.current.date(byAdding: .year, value: -3, to: .now) ?? .now
-    @State private var sex: Sex = .unspecified
+    @State private var ageInMonths = 36
     @State private var clothingSize = 98
     @State private var shoeSize = 25
     @State private var sizesTouched = false
     @State private var confirmingDeletion = false
+
+    /// Month by month until 2, then year by year until 16.
+    private static let ageOptions = Array(0..<24) + stride(from: 24, through: 192, by: 12)
+
+    private static func nearestOption(to months: Int) -> Int {
+        ageOptions.min { abs($0 - months) < abs($1 - months) } ?? months
+    }
 
     private var isCreating: Bool {
         if case .create = mode { return true }
@@ -30,34 +36,30 @@ struct ChildFormView: View {
 
     var body: some View {
         Form {
-            Section("Prénom") {
-                TextField("Prénom", text: $name)
-                    .textContentType(.givenName)
+            Section {
+                TextField("Prénom ou surnom", text: $name)
+                    .textContentType(.nickname)
+            } footer: {
+                Text("Un surnom suffit : il sert seulement à reconnaître ses tenues.")
             }
             Section {
-                DatePicker("Date de naissance", selection: $birthDate, in: ...Date.now, displayedComponents: .date)
-                    .environment(\.locale, Locale(identifier: "fr_FR"))
-                ChipPicker(options: Sex.allCases, selection: $sex) { option in
-                    switch option {
-                    case .girl: return "Fille"
-                    case .boy: return "Garçon"
-                    case .unspecified: return "Non précisé"
+                Picker("Âge", selection: $ageInMonths) {
+                    ForEach(Self.ageOptions, id: \.self) { months in
+                        Text(Formatting.age(months: months)).tag(months)
                     }
                 }
             } footer: {
-                Text("Utilisé uniquement pour les courbes de croissance.")
+                Text("Mino n'a besoin ni de sa date de naissance ni de son sexe.")
             }
-            if isCreating {
-                Section {
-                    ChipPicker(options: SizeChart.clothingSizes, selection: touched($clothingSize)) {
-                        SizeChart.shortLabel(size: $0, kind: .clothing)
-                    }
-                    Stepper("Pointure \(shoeSize)", value: touched($shoeSize), in: SizeChart.shoeSizes[0]...SizeChart.shoeSizes[SizeChart.shoeSizes.count - 1])
-                } header: {
-                    Text("Sa taille en ce moment")
-                } footer: {
-                    Text("La taille indiquée sur l'étiquette de ses vêtements actuels. Mino affinera avec le temps.")
+            Section {
+                ChipPicker(options: SizeChart.clothingSizes, selection: touched($clothingSize)) {
+                    SizeChart.shortLabel(size: $0, kind: .clothing)
                 }
+                Stepper("Pointure \(shoeSize)", value: touched($shoeSize), in: SizeChart.shoeSizes[0]...SizeChart.shoeSizes[SizeChart.shoeSizes.count - 1])
+            } header: {
+                Text("Sa taille en ce moment")
+            } footer: {
+                Text("La taille indiquée sur l'étiquette de ses vêtements actuels. Mino affinera avec le temps.")
             }
             Section {
                 Button(isCreating ? "Continuer" : "Enregistrer", action: save)
@@ -75,8 +77,7 @@ struct ChildFormView: View {
         .scrollContentBackground(.hidden)
         .background(Theme.background)
         .onAppear(perform: load)
-        .onChange(of: birthDate) { suggestSizes() }
-        .onChange(of: sex) { suggestSizes() }
+        .onChange(of: ageInMonths) { suggestSizes() }
         .confirmationDialog("Supprimer ce profil ?", isPresented: $confirmingDeletion, titleVisibility: .visible) {
             Button("Supprimer", role: .destructive, action: delete)
         } message: {
@@ -84,47 +85,65 @@ struct ChildFormView: View {
         }
     }
 
-    /// Marks sizes as chosen by the parent so a later birth date change does not override them.
+    /// Marks sizes as chosen by the parent so a later age change does not override them.
     private func touched(_ binding: Binding<Int>) -> Binding<Int> {
         Binding(get: { binding.wrappedValue }, set: { binding.wrappedValue = $0; sizesTouched = true })
     }
 
     private func load() {
-        if case .edit(let child) = mode {
-            name = child.name
-            birthDate = child.birthDate
-            sex = child.sex
-        } else {
+        guard case .edit(let child) = mode else {
             suggestSizes()
+            return
         }
+        let profile = child.profile
+        name = child.name
+        ageInMonths = Self.nearestOption(to: child.ageInMonths)
+        clothingSize = profile.currentSize(.clothing, on: .now)
+        shoeSize = profile.currentSize(.shoes, on: .now)
+        sizesTouched = true
     }
 
     private func suggestSizes() {
-        guard isCreating, !sizesTouched else { return }
-        let typical = ChildProfile(id: UUID(), name: name, birthDate: birthDate, sex: sex, records: [])
+        guard !sizesTouched else { return }
+        let typical = ChildProfile(
+            id: UUID(), name: name,
+            estimatedBirth: ChildProfile.estimatedBirth(ageInMonths: ageInMonths, on: .now), records: []
+        )
         clothingSize = typical.currentSize(.clothing, on: .now)
         shoeSize = typical.currentSize(.shoes, on: .now)
     }
 
     private func save() {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
+        let child: Child
         switch mode {
         case .create:
-            let child = Child(name: trimmed, birthDate: birthDate, sex: sex)
+            child = Child(name: trimmed, ageInMonths: ageInMonths)
             context.insert(child)
-            let entry = GrowthEntry(
-                date: .now, heightCM: SizeChart.typicalHeight(wearing: clothingSize),
-                shoeSize: Double(shoeSize), isApproximate: true
-            )
-            context.insert(entry)
-            entry.child = child
-            onDone(child)
-        case .edit(let child):
+            recordSizes(for: child)
+        case .edit(let existing):
+            child = existing
             child.name = trimmed
-            child.birthDate = birthDate
-            child.sex = sex
-            onDone(child)
+            // Only an age the parent actually changed replaces the one that keeps counting since entry.
+            if ageInMonths != Self.nearestOption(to: child.ageInMonths) {
+                child.ageInMonths = ageInMonths
+            }
+            let profile = child.profile
+            if clothingSize != profile.currentSize(.clothing, on: .now) || shoeSize != profile.currentSize(.shoes, on: .now) {
+                recordSizes(for: child)
+            }
         }
+        onDone(child)
+    }
+
+    /// The sizes the parent gave become an approximate growth record.
+    private func recordSizes(for child: Child) {
+        let entry = GrowthEntry(
+            date: .now, heightCM: SizeChart.typicalHeight(wearing: clothingSize),
+            shoeSize: Double(shoeSize), isApproximate: true
+        )
+        context.insert(entry)
+        entry.child = child
     }
 
     private func delete() {

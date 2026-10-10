@@ -4,7 +4,7 @@
 
 | Principe | Traduction technique |
 |---|---|
-| **Vie privée par construction** | Aucun serveur, aucun compte, aucun SDK tiers. Toute l'analyse d'image se fait sur l'appareil (Apple Vision). La localisation est approximative, ponctuelle et jamais stockée. |
+| **Vie privée par construction** | Minimisation : un prénom ou surnom, un âge et des tailles, rien de plus. Aucun serveur, aucun compte, aucun SDK tiers. Toute l'analyse d'image se fait sur l'appareil (Apple Vision). La localisation est approximative, ponctuelle et jamais stockée. |
 | **L'intelligence est testable** | Toute la logique métier vit dans `MinoKit`, un package Swift pur (Foundation seulement), testé hors de l'app et même sous Linux. |
 | **Natif et sobre** | SwiftUI, SwiftData, Observation, Swift Charts, WeatherKit et Vision, sur iOS 17 minimum. Zéro dépendance externe. |
 | **Aucun code mort** | Chaque type et chaque fonction est utilisé. Pas d'abstraction « au cas où » : un protocole n'apparaît que lorsqu'il a deux implémentations. |
@@ -44,7 +44,7 @@ La frontière est nette : l'app traduit ses objets SwiftData en **valeurs immuab
 ## L'intelligence, expliquée
 
 ### Projection de croissance (`ChildProfile`)
-- Les références de stature (médiane et écart-type, de 0 à 16 ans, fille ou garçon) sont tirées des standards OMS 2006 et de la référence OMS 2007.
+- Les références de stature (médiane et écart-type, de 0 à 16 ans) sont tirées des standards OMS 2006 et de la référence OMS 2007, en moyenne filles et garçons : Mino ne demande ni le sexe ni la date de naissance. L'âge déclaré donne une naissance estimée (`ChildProfile.estimatedBirth`), et les tailles de l'enfant recalent la projection.
 - L'enfant est maintenu dans **son propre couloir** (z-score constant depuis la dernière mesure). Un grand enfant reste grand.
 - **L'incertitude** s'élargit avec l'horizon. Elle part de ±0,5 cm après une vraie mesure, et de ±2,5 cm quand la taille est déduite des vêtements portés (l'onboarding demande la taille de l'étiquette, pas la stature).
 - La pointure suit la même logique : l'écart à une courbe typique est conservé.

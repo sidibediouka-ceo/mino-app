@@ -3,20 +3,20 @@ import XCTest
 
 final class GrowthTests: XCTestCase {
     func testWithoutRecordsTheReferenceMedianIsUsedWithAWideBand() {
-        let child = ChildProfile(id: UUID(), name: "A", birthDate: Fixtures.date(2021, 10, 10), sex: .girl, records: [])
+        let child = ChildProfile(id: UUID(), name: "A", estimatedBirth: Fixtures.date(2021, 10, 10), records: [])
         let estimate = child.height(at: Fixtures.today)
-        XCTAssertEqual(estimate.expected, 109.4, accuracy: 0.5)
+        XCTAssertEqual(estimate.expected, 109.7, accuracy: 0.5)
         XCTAssertGreaterThan(estimate.high - estimate.low, 8)
     }
 
     func testATallChildStaysOnHerGrowthChannel() {
         let tall = ChildProfile(
-            id: UUID(), name: "A", birthDate: Fixtures.date(2022, 10, 10), sex: .girl,
+            id: UUID(), name: "A", estimatedBirth: Fixtures.date(2022, 10, 10),
             records: [GrowthRecord(date: Fixtures.today, heightCM: 110, shoeSize: nil)]
         )
         let inOneYear = Fixtures.date(2027, 10, 10)
         let projected = tall.height(at: inOneYear).expected
-        let median = GrowthReference.medianStature(ageMonths: 60, sex: .girl)
+        let median = GrowthReference.medianStature(ageMonths: 60)
         XCTAssertGreaterThan(projected, median + 5)
         XCTAssertLessThan(projected, 120)
     }
@@ -31,7 +31,7 @@ final class GrowthTests: XCTestCase {
 
     func testApproximateRecordsAreLessCertainThanMeasurements() {
         let approximate = ChildProfile(
-            id: UUID(), name: "A", birthDate: Fixtures.date(2022, 10, 10), sex: .boy,
+            id: UUID(), name: "A", estimatedBirth: Fixtures.date(2022, 10, 10),
             records: [GrowthRecord(date: Fixtures.today, heightCM: 104, shoeSize: nil, isApproximate: true)]
         )
         let a = approximate.height(at: Fixtures.today), m = Fixtures.leo.height(at: Fixtures.today)
@@ -62,5 +62,14 @@ final class GrowthTests: XCTestCase {
         XCTAssertGreaterThan(clothing.when.expected, Fixtures.today)
         let shoes = try XCTUnwrap(Fixtures.leo.nextSize(.shoes, after: Fixtures.today))
         XCTAssertEqual(shoes.size, 28)
+    }
+}
+
+final class EstimatedBirthTests: XCTestCase {
+    func testAnAgeIsEnoughToPlaceTheChildOnTheCurves() {
+        let birth = ChildProfile.estimatedBirth(ageInMonths: 48, on: Fixtures.today)
+        let child = ChildProfile(id: UUID(), name: "A", estimatedBirth: birth, records: [])
+        XCTAssertEqual(child.ageInMonths(at: Fixtures.today), 48, accuracy: 0.01)
+        XCTAssertEqual(child.currentSize(.clothing, on: Fixtures.today), 104)
     }
 }
