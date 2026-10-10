@@ -161,6 +161,7 @@ struct OutfitCard: View {
             .padding(.horizontal, 13)
             .foregroundStyle(Theme.ink)
             .background(Theme.card, in: Capsule())
+            .overlay(Capsule().strokeBorder(Theme.outline, lineWidth: 1))
         }
         .disabled(isDone)
         .accessibilityLabel("Type de journée : \(plan.context.displayName)")
