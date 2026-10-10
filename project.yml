@@ -13,8 +13,8 @@ configFiles:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "5"
+    MARKETING_VERSION: "1.1"
+    CURRENT_PROJECT_VERSION: "1"
 
 targets:
   Mino:
@@ -47,10 +47,6 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: YES
-      configs:
-        # Screenshot scenarios and their pictures stay out of App Store builds.
-        Release:
-          EXCLUDED_SOURCE_FILE_NAMES: "Demo*"
 
   # Mino's domain logic, built as a framework inside the project (no package resolution).
   # MinoKit/Package.swift builds the same sources for `swift test`.
