@@ -95,6 +95,8 @@ struct GarmentDetailView: View {
 
     // MARK: Lifecycle
 
+    /// Mino's advice first, then the family (children, boxes, keepsakes), then a second life
+    /// elsewhere (give, sell): three clear groups rather than one long list.
     private var lifecycle: some View {
         let family = children.map(\.profile)
         let isOutgrown = garment.state == .active
@@ -102,10 +104,11 @@ struct GarmentDetailView: View {
         let recommendation = isOutgrown || garment.state == .stored
             ? LifecycleAdvisor.recommend(for: garment.item, family: family, on: .now)
             : nil
+        let recipients = DestinationLabel.recipients(for: garment, children: children)
 
-        return VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: 18) {
             Text("Sa prochaine vie")
-                .font(.headline)
+                .font(.system(.headline, design: .rounded))
                 .foregroundStyle(Theme.ink)
 
             if let recommendation {
@@ -117,36 +120,97 @@ struct GarmentDetailView: View {
 
             if garment.state == .forSale {
                 let listing = ListingWriter.listing(for: garment.item, brand: garment.brand)
-                ShareLink(item: listing.text, subject: Text(listing.title)) {
-                    Label("Partager l'annonce", systemImage: "square.and.arrow.up")
-                }
-                .buttonStyle(PrimaryButtonStyle())
-                Button("Vendu", systemImage: "checkmark.seal") {
-                    change("Vendu ! Il reste visible dans les Archives.") { garment.move(to: .sold, owner: nil) }
-                }
+                HStack(spacing: 10) {
+                    ShareLink(item: listing.text, subject: Text(listing.title)) {
+                        Label("Partager l'annonce", systemImage: "square.and.arrow.up")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    Button("Vendu", systemImage: "checkmark.seal") {
+                        change("Vendu ! Il reste visible dans les Archives.") { garment.move(to: .sold, owner: nil) }
+                    }
                     .buttonStyle(SecondaryButtonStyle())
+                }
             }
 
-            ActionList(actions: actions)
+            group("Dans la famille") {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(recipients) { child in
+                            DestinationTile(title: child.name, hint: fitHint(for: child)) {
+                                ChildAvatar(name: child.name, color: children.color(of: child), size: 44)
+                            } action: {
+                                apply(.sibling(child.id, fitsFrom: nil))
+                            }
+                        }
+                        if garment.state != .stored {
+                            DestinationTile(title: "Aux cartons", hint: "Pour plus tard") {
+                                tileIcon("shippingbox.fill")
+                            } action: {
+                                apply(.store)
+                            }
+                        }
+                        if garment.state != .keepsake {
+                            DestinationTile(title: "En souvenir", hint: "On le garde") {
+                                tileIcon("heart.text.square.fill")
+                            } action: {
+                                change("Gardé en souvenir. Il reste visible dans les Archives.") { garment.move(to: .keepsake, owner: nil) }
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 2)
+                }
+            }
+
+            if !garment.state.hasLeftFamily {
+                group("Une seconde vie ailleurs") {
+                    HStack(spacing: 10) {
+                        DestinationTile(title: "Donner", hint: "Association, proches") {
+                            tileIcon("heart.fill")
+                        } action: {
+                            apply(.donate)
+                        }
+                        if garment.state != .forSale {
+                            DestinationTile(title: "Vendre", hint: "Annonce rédigée") {
+                                tileIcon("tag.fill")
+                            } action: {
+                                apply(.sell)
+                            }
+                        }
+                    }
+                }
+            }
         }
         .minoCard()
     }
 
-    private var actions: [(title: String, symbol: String, perform: () -> Void)] {
-        var actions: [(title: String, symbol: String, perform: () -> Void)] = []
-        for destination in DestinationLabel.all(for: garment, children: children) {
-            if destination == .sell && garment.state == .forSale { continue }
-            if destination == .store && garment.state == .stored { continue }
-            actions.append((DestinationLabel.text(destination, children: children), DestinationLabel.symbol(destination), {
-                apply(destination)
-            }))
+    private func group<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                .foregroundStyle(Theme.secondaryText)
+            content()
         }
-        if garment.state != .keepsake {
-            actions.append(("Garder en souvenir", "heart.text.square", {
-                change("Gardé en souvenir. Il reste visible dans les Archives.") { garment.move(to: .keepsake, owner: nil) }
-            }))
+    }
+
+    private func tileIcon(_ symbol: String) -> some View {
+        Image(systemName: symbol)
+            .font(.title3)
+            .foregroundStyle(Theme.accent)
+            .frame(width: 44, height: 44)
+            .background(Theme.chip, in: Circle())
+    }
+
+    /// Would it fit this child? Said in a few words under their avatar.
+    private func fitHint(for child: Child) -> String {
+        let profile = child.profile
+        switch profile.fit(of: garment.item, on: .now) {
+        case .fits: return "À sa taille"
+        case .roomy: return "Un peu grand"
+        case .tooSmall: return "Déjà petit"
+        case .tooBig:
+            return profile.dateItemFits(garment.item, from: .now).map { "Vers \(Formatting.period($0.expected))" } ?? "Plus tard"
         }
-        return actions
     }
 
     // MARK: Confirmation
@@ -204,16 +268,33 @@ struct GarmentDetailView: View {
     }
 }
 
-/// Secondary actions, one capsule per line.
-private struct ActionList: View {
-    let actions: [(title: String, symbol: String, perform: () -> Void)]
+/// One possible destination: an avatar or icon, a name, and a short hint.
+private struct DestinationTile<Icon: View>: View {
+    let title: String
+    let hint: String
+    @ViewBuilder let icon: Icon
+    let action: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(actions.indices, id: \.self) { index in
-                Button(actions[index].title, systemImage: actions[index].symbol, action: actions[index].perform)
-                    .buttonStyle(SecondaryButtonStyle())
+        Button(action: action) {
+            VStack(spacing: 6) {
+                icon
+                Text(title)
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(1)
+                Text(hint)
+                    .font(.caption2)
+                    .foregroundStyle(Theme.secondaryText)
+                    .lineLimit(1)
             }
+            .frame(minWidth: 96, maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 8)
+            .background(Theme.background, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(hint)
     }
 }

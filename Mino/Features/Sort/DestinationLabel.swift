@@ -26,7 +26,11 @@ enum DestinationLabel {
 
     /// Every destination a parent can choose for a garment, siblings first.
     static func all(for garment: Garment, children: [Child]) -> [Destination] {
-        let siblings = children.filter { $0.id != garment.owner?.id || garment.state != .active }
-        return siblings.map { Destination.sibling($0.id, fitsFrom: nil) } + [.store, .donate, .sell]
+        recipients(for: garment, children: children).map { Destination.sibling($0.id, fitsFrom: nil) } + [.store, .donate, .sell]
+    }
+
+    /// The children a garment can be handed to: everyone but the child who wears it now.
+    static func recipients(for garment: Garment, children: [Child]) -> [Child] {
+        children.filter { $0.id != garment.owner?.id || garment.state != .active }
     }
 }
