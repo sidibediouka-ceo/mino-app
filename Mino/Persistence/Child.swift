@@ -43,6 +43,9 @@ final class Child {
         set { routineRaw = newValue.rawValue }
     }
 
+    /// Old enough to dress alone with pictures, young enough to enjoy it: Mode enfant is offered.
+    var isOfDressingAge: Bool { (36...96).contains(ageInMonths) }
+
     var profile: ChildProfile {
         ChildProfile(
             id: id, name: name,

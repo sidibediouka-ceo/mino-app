@@ -91,19 +91,18 @@ struct OutfitCard: View {
                     .font(.system(.headline, design: .rounded))
                     .foregroundStyle(color)
             } else if !outfit.pieces.isEmpty {
-                VStack(spacing: 6) {
-                    Button(action: onDressing) {
-                        Label("Habiller \(child.name)", systemImage: "sparkles")
-                    }
-                    .buttonStyle(PrimaryButtonStyle(color: color))
-                    HStack {
-                        Text("Toucher un vêtement pour voir d'autres options.")
-                            .font(.caption)
-                            .foregroundStyle(Theme.secondaryText)
-                        Spacer()
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Toucher un vêtement pour voir d'autres options.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                    HStack(spacing: 10) {
                         Button("Ajouter ou changer", systemImage: "plus.circle", action: onEdit)
-                            .font(.system(.caption, design: .rounded).weight(.semibold))
-                            .foregroundStyle(Theme.accent)
+                            .buttonStyle(SecondaryButtonStyle())
+                        if child.isOfDressingAge {
+                            Button("Mode enfant", systemImage: "figure.and.child.holdinghands", action: onDressing)
+                                .buttonStyle(SecondaryButtonStyle())
+                                .accessibilityHint("Pour que \(child.name) s'habille seul avec les images")
+                        }
                     }
                 }
             }

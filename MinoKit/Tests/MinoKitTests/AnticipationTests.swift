@@ -157,6 +157,12 @@ final class RecognitionAndListingTests: XCTestCase {
         XCTAssertEqual(ListingWriter.listing(for: item, brand: "  ").title, "Manteau enfant · 4 ans")
     }
 
+    func testChildInstructions() {
+        XCTAssertEqual(GarmentCategory.pants.childInstruction, "Mets ton pantalon")
+        XCTAssertEqual(GarmentCategory.dress.childInstruction, "Mets ta robe")
+        XCTAssertEqual(GarmentCategory.sneakers.childInstruction, "Mets tes baskets")
+    }
+
     func testShoppingListAndLot() {
         let need = Need(childID: UUID(), group: .warmShoes, season: .winter, size: 28, missing: 1, familyStock: [])
         XCTAssertEqual(ShoppingList.text(for: "Léo", needs: [need]), "Pour Léo :\n• Bottes : 1 en Pointure 28")

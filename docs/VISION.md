@@ -75,7 +75,7 @@ Le produit repose sur une entrée et trois boucles. Chaque boucle a un budget d'
 - Le **Carnet des tenues**, un calendrier privé, garde la trace de ce que chaque enfant a porté et permet de **préparer une tenue à l'avance** pour une date (« Soirée chez Lina »). Mino propose, le parent ajuste, et le jour J l'accueil affiche cette tenue telle quelle.
 - Pour chaque enfant : une tenue complète et justifiée. Toucher une pièce la remplace par la meilleure alternative. Le contexte (École, Sport, Sortie, Fête, Maison) s'ajuste en un geste.
 - **Aucune confirmation à faire** : une tenue planifiée est considérée comme portée une fois la journée passée. Mino met à jour la rotation et apprend des échanges de pièces faits par le parent.
-- **Mode enfant** au matin : les pièces en grand, dans l'ordre d'habillage, que l'enfant coche lui-même. Ce mode est inspiré des crèches japonaises. Il transforme une corvée en autonomie, et c'est un moment que les enfants réclament.
+- **Mode enfant**, proposé discrètement pour les 3 à 8 ans seulement : le parent passe le téléphone, l'enfant voit une pièce à la fois en très grand, dans l'ordre d'habillage, entend la consigne (« Mets ton pantalon »), et touche la pièce une fois mise. Il n'y a rien à lire, une étoile salue la fin, et seul un appui long du parent quitte l'écran. Ce mode est inspiré des crèches japonaises : il transforme une corvée en autonomie. L'accueil, lui, n'impose aucune action au parent.
 - **Budget : 1 geste par jour.**
 
 ### Boucle 2 : « Les passages » (quelques fois par an)

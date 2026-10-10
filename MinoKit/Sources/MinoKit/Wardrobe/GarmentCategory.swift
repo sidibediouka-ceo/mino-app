@@ -58,6 +58,33 @@ public enum GarmentCategory: String, CaseIterable, Codable, Sendable {
         }
     }
 
+    /// Spoken to the child in Mode enfant: "Mets ton pantalon", "Mets ta robe".
+    public var childInstruction: String {
+        let noun: String
+        switch self {
+        case .tshirt: noun = "ton t-shirt"
+        case .longSleeve: noun = "ton haut"
+        case .turtleneck: noun = "ton sous-pull"
+        case .sweater: noun = "ton pull"
+        case .cardigan: noun = "ton gilet"
+        case .dress: noun = "ta robe"
+        case .playsuit: noun = "ton ensemble"
+        case .pants: noun = "ton pantalon"
+        case .overalls: noun = "ta salopette"
+        case .shorts: noun = "ton short"
+        case .tights: noun = "ton collant"
+        case .lightJacket: noun = "ta veste"
+        case .coat: noun = "ton manteau"
+        case .raincoat: noun = "ton imperméable"
+        case .sneakers: noun = "tes baskets"
+        case .boots: noun = "tes bottes"
+        case .sandals: noun = "tes sandales"
+        case .pajamas: noun = "ton pyjama"
+        case .coldAccessory: noun = "ton bonnet"
+        }
+        return "Mets \(noun)"
+    }
+
     /// Feminine nouns take "portée" in "n'a pas été portée".
     var isFeminine: Bool {
         switch self {
