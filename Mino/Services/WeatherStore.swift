@@ -80,11 +80,23 @@ final class WeatherStore {
             lastUpdate = .now
             failure = nil
             version += 1
-        } catch WeatherError.permissionDenied {
-            failure = "Apple Météo refuse l'accès : la capability WeatherKit de l'identifiant app.mino.ios ou l'équipe de signature n'est pas reconnue."
         } catch {
-            failure = "Apple Météo n'a pas répondu (\(error.localizedDescription))."
+            failure = Self.explanation(of: error)
         }
+    }
+
+    /// WeatherKit authenticates the app with a token tied to its signing; when Apple refuses it
+    /// (permission denied, or the daemon's JWT error), the fix is on the developer account.
+    private static func explanation(of error: Error) -> String {
+        let isAuthentication: Bool
+        if case WeatherError.permissionDenied = error {
+            isAuthentication = true
+        } else {
+            isAuthentication = String(describing: error).contains("JWTAuthenticator")
+        }
+        return isAuthentication
+            ? "Apple Météo ne reconnaît pas encore l'app : WeatherKit n'est pas actif dans le profil de signature de app.mino.ios."
+            : "Apple Météo n'a pas répondu (\(error.localizedDescription))."
     }
 
     private static func sky(for day: WeatherKit.DayWeather) -> SkyCondition {
