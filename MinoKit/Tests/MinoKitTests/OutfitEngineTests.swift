@@ -61,6 +61,19 @@ final class OutfitEngineTests: XCTestCase {
         XCTAssertTrue(outfit.pieces.contains(OutfitPiece(slot: .bottom, itemID: fresh.id)))
     }
 
+    func testTomorrowAvoidsWhatIsPlannedForToday() {
+        let today = Fixtures.today
+        let tomorrow = Fixtures.date(2026, 10, 11)
+        let items = [Fixtures.item(.pants), Fixtures.item(.pants, color: .grey), Fixtures.item(.longSleeve, color: .white)]
+        let weather = { (date: Date) in Fixtures.weather(morning: 14, high: 18, on: date) }
+        let todays = engine.propose(child: leo, items: items, weather: weather(today), context: .home)
+        let plannedBottom = try? XCTUnwrap(todays.pieces.first { $0.slot == .bottom }?.itemID)
+        let rotated = items.map { $0.id == plannedBottom ? $0.worn(on: today) : $0 }
+        let tomorrows = engine.propose(child: leo, items: rotated, weather: weather(tomorrow), context: .home)
+        XCTAssertNotEqual(tomorrows.pieces.first { $0.slot == .bottom }?.itemID, plannedBottom)
+        XCTAssertEqual(rotated.first { $0.id == plannedBottom }?.lastWornAt, today)
+    }
+
     func testSportExcludesDressesAndPrefersSportswear() {
         let ines = Fixtures.ines
         let dress = Fixtures.item(.dress, owner: ines, size: 92)

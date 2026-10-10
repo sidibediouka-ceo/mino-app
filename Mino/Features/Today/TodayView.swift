@@ -3,8 +3,9 @@ import SwiftData
 import SwiftUI
 import WeatherKit
 
-/// "Le soir, c'est prêt": the outfit of each child, and nothing else. From 4 pm the screen
-/// shows tomorrow on its own. Planning and sorting live in the other tabs.
+/// "Le soir, c'est prêt": the outfit of each child for today and tomorrow, and nothing else.
+/// From 4 pm the screen opens on tomorrow. Planning and sorting live in the other tabs; past
+/// outfits are kept in the journal.
 struct TodayView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.colorScheme) private var colorScheme
@@ -18,19 +19,22 @@ struct TodayView: View {
     @AppStorage("eveningReminderMinutes") private var reminderMinutes = 19 * 60 + 30
     @State private var showsTomorrow = Calendar.current.component(.hour, from: .now) >= 16
     @State private var showingSettings = false
+    @State private var showingJournal = false
     @State private var dressingPlan: PlannedOutfit?
 
     private let calendar = Calendar.current
 
-    private var day: Date {
-        let today = calendar.startOfDay(for: .now)
-        return showsTomorrow ? calendar.date(byAdding: .day, value: 1, to: today) ?? today : today
-    }
+    private var today: Date { calendar.startOfDay(for: .now) }
+
+    private var tomorrow: Date { calendar.date(byAdding: .day, value: 1, to: today) ?? today }
+
+    private var day: Date { showsTomorrow ? tomorrow : today }
 
     /// Changes whenever something that affects the plans changes.
     private var refreshKey: String {
         let wardrobe = garments.map { "\($0.id)\($0.stateRaw)\($0.owner?.id.uuidString ?? "")\($0.size)\($0.categoryRaw)" }
-        return "\(day.timeIntervalSince1970)|\(weather.version)|\(children.map(\.id))|\(wardrobe.joined().hashValue)|\(reminderEnabled)|\(reminderMinutes)"
+        let planned = plans.map { "\($0.day.timeIntervalSince1970)\($0.contextRaw)\($0.piecesRaw)" }
+        return "\(today.timeIntervalSince1970)|\(weather.version)|\(children.map(\.id))|\(wardrobe.joined().hashValue)|\(planned.joined().hashValue)|\(reminderEnabled)|\(reminderMinutes)"
     }
 
     var body: some View {
@@ -65,6 +69,13 @@ struct TodayView: View {
             }
             .background(Theme.background)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showingJournal = true } label: {
+                        Image(systemName: "calendar")
+                            .foregroundStyle(Theme.ink)
+                    }
+                    .accessibilityLabel("Carnet des tenues")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingSettings = true } label: {
                         Image(systemName: "gearshape")
@@ -77,10 +88,11 @@ struct TodayView: View {
         .task(id: refreshKey) {
             await weather.refresh()
             guard !Task.isCancelled else { return }
-            planner.ensurePlans(for: day, forecast: weather.forecast(for: day))
+            planner.ensurePlans(for: [today, tomorrow], forecast: weather.forecast(for:))
             await scheduleReminders()
         }
         .sheet(isPresented: $showingSettings) { SettingsView() }
+        .sheet(isPresented: $showingJournal) { OutfitJournalView() }
         .fullScreenCover(item: $dressingPlan) { plan in
             DressingTogetherView(
                 childName: plan.child?.name ?? "",
@@ -96,20 +108,17 @@ struct TodayView: View {
 
     private func header(forecast: DayForecast) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(Formatting.longDate(.now))
+            Text(Formatting.longDate(day))
                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
                 .foregroundStyle(Theme.secondaryText)
-            HStack(alignment: .center) {
-                Text(showsTomorrow ? "Demain" : "Aujourd'hui")
-                    .font(.system(size: 38, weight: .bold, design: .rounded))
-                    .foregroundStyle(Theme.ink)
-                Spacer()
-                Button(showsTomorrow ? "Aujourd'hui" : "Demain", systemImage: showsTomorrow ? "arrow.left" : "arrow.right") {
-                    withAnimation(.snappy) { showsTomorrow.toggle() }
-                }
-                .buttonStyle(SecondaryButtonStyle())
-                .accessibilityHint("Affiche les tenues de ce jour-là")
+            Text(showsTomorrow ? "Demain" : "Aujourd'hui")
+                .font(.system(size: 38, weight: .bold, design: .rounded))
+                .foregroundStyle(Theme.ink)
+            Picker("Jour", selection: $showsTomorrow.animation(.snappy)) {
+                Text("Aujourd'hui").tag(false)
+                Text("Demain").tag(true)
             }
+            .pickerStyle(.segmented)
             HStack(spacing: 14) {
                 Image(systemName: Formatting.symbol(for: forecast))
                     .symbolRenderingMode(.multicolor)

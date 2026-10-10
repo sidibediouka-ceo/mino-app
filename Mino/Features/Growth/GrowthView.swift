@@ -76,7 +76,7 @@ struct GrowthView: View {
         case .sort(_, let itemIDs):
             return BriefingContent(
                 symbol: "arrow.triangle.2.circlepath",
-                title: Formatting.count(itemIDs.count, "vêtement trop petit", "vêtements trop petits"),
+                title: Formatting.count(itemIDs.count, "vêtement devenu petit", "vêtements devenus petits"),
                 message: "Une minute pour leur trouver une suite : frère ou sœur, cartons, don ou vente.",
                 action: "Trier"
             )

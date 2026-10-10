@@ -67,7 +67,7 @@ struct GarmentDetailView: View {
             let profile = owner.profile
             switch profile.fit(of: garment.item, on: .now) {
             case .fits: return "Va bien à \(owner.name)"
-            case .tooSmall: return "Probablement trop petit pour \(owner.name)"
+            case .tooSmall: return "Devenu petit pour \(owner.name)"
             case .roomy, .tooBig:
                 guard let date = profile.dateItemFits(garment.item, from: .now) else { return "Encore grand pour \(owner.name)" }
                 return "À la taille de \(owner.name) \(Formatting.window(date))"

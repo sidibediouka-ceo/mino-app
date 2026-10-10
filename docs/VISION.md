@@ -71,7 +71,8 @@ Le produit repose sur une entrée et trois boucles. Chaque boucle a un budget d'
 
 ### Boucle 1 : « Le soir, c'est prêt » (quotidienne)
 - **19 h 30**, une notification opt-in : « Demain 8° et pluie. Les tenues de Léo et Inès sont prêtes. »
-- À partir de 16 h, l'écran *Aujourd'hui* bascule seul sur **demain**.
+- Deux onglets, **Aujourd'hui** et **Demain** ; à partir de 16 h, l'écran s'ouvre sur demain. La tenue de demain ne répète jamais celle prévue aujourd'hui.
+- Le **Carnet des tenues**, un calendrier privé, garde la trace de ce que chaque enfant a porté.
 - Pour chaque enfant : une tenue complète et justifiée. Toucher une pièce la remplace par la meilleure alternative. Le contexte (École, Sport, Sortie, Fête, Maison) s'ajuste en un geste.
 - **Aucune confirmation à faire** : une tenue planifiée est considérée comme portée une fois la journée passée. Mino met à jour la rotation et apprend des échanges de pièces faits par le parent.
 - **Mode enfant** au matin : les pièces en grand, dans l'ordre d'habillage, que l'enfant coche lui-même. Ce mode est inspiré des crèches japonaises. Il transforme une corvée en autonomie, et c'est un moment que les enfants réclament.
@@ -96,7 +97,7 @@ Le produit repose sur une entrée et trois boucles. Chaque boucle a un budget d'
 | Plusieurs enfants, profils, mesures | Comptes et connexion : aucune valeur ajoutée, et un risque pour la vie privée |
 | Ajout en lot, détourage, catégorie, couleur et lecture d'étiquette sur l'appareil | Reconnaissance de marque ou de matière : trop peu fiable, et peu utile pour décider |
 | Inventaire par enfant et cartons familiaux | Sous-vêtements et chaussettes : trop de saisie pour trop peu de valeur |
-| Tenue du jour ou du lendemain : météo, contexte, rotation, harmonie des couleurs | Calendrier de tenues sur plusieurs semaines : le lendemain suffit, l'au-delà est spéculatif |
+| Tenue du jour et du lendemain : météo, contexte, rotation, harmonie des couleurs ; carnet des tenues portées | Planification sur plusieurs semaines : le lendemain suffit, l'au-delà est spéculatif |
 | Projection de taille et de pointure avec incertitude | Courbes médicales détaillées : Mino n'est pas un outil de santé |
 | Besoins anticipés et récupération depuis les cartons | Liens d'achat ou affiliation : contraire à la promesse |
 | Tri, transmission, don, vente (annonce prête) et souvenirs | Marketplace intégrée : conflit de valeurs |

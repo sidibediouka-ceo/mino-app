@@ -16,8 +16,6 @@ final class PlannedOutfit {
     var skippedIDs: [UUID] = []
     var gapsRaw: [String] = []
     var reasons: [String] = []
-    /// True when planned on a seasonal estimate; replanned once a real forecast arrives.
-    var basedOnEstimate: Bool = false
     var confirmedAt: Date?
     var child: Child?
 

@@ -68,4 +68,14 @@ public struct WardrobeItem: Identifiable, Equatable, Sendable {
         self.affinity = affinity
         self.fitConfirmedAt = fitConfirmedAt
     }
+
+    /// The same garment, counted as worn on `date` (an outfit planned for an earlier day),
+    /// so that the next day's outfit does not repeat it.
+    public func worn(on date: Date) -> WardrobeItem {
+        let latest = lastWornAt.map { max($0, date) } ?? date
+        return WardrobeItem(
+            id: id, ownerID: ownerID, category: category, color: color, size: size, occasion: occasion,
+            state: state, lastWornAt: latest, affinity: affinity, fitConfirmedAt: fitConfirmedAt
+        )
+    }
 }

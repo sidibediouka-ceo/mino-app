@@ -67,11 +67,11 @@ struct OutfitCard: View {
                 if !outfit.gaps.isEmpty {
                     Button(action: onGaps) {
                         Label(
-                            "Rien à sa taille pour : \(outfit.gaps.map { $0.displayName.lowercased() }.joined(separator: ", "))",
-                            systemImage: "exclamationmark.circle.fill"
+                            "Pas encore à sa taille : \(outfit.gaps.map { $0.displayName.lowercased() }.joined(separator: ", ")). Mino vous aide à anticiper.",
+                            systemImage: "lightbulb"
                         )
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.accent)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.secondaryText)
                     }
                     .buttonStyle(.plain)
                 }

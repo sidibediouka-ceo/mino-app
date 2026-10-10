@@ -2,7 +2,10 @@ import Foundation
 import MinoKit
 import SwiftData
 
-/// Keeps one stable outfit per child and day, and turns the parent's gestures into learning.
+/// Keeps one outfit per child and day, and turns the parent's gestures into learning.
+///
+/// Days are planned in order: tomorrow counts today's planned outfit as worn, so it never
+/// repeats it, whether or not today's outfit was handed over in Mode enfant.
 @MainActor
 struct DayPlanner {
     let family: FamilySnapshot
@@ -11,29 +14,32 @@ struct DayPlanner {
 
     private var engine: OutfitEngine { OutfitEngine(calendar: calendar) }
 
-    /// Makes sure every child has an up-to-date plan for `day`.
-    func ensurePlans(for day: Date, forecast: DayForecast) {
-        // A past day's outfit is assumed worn: parents swap what changed, they never have to confirm.
+    /// Makes sure every child has an up-to-date plan for each of `days` (in chronological order).
+    ///
+    /// A plan the parent has not touched follows the latest weather and wardrobe; a plan they
+    /// adjusted is kept as they left it, unless one of its garments is no longer available.
+    func ensurePlans(for days: [Date], forecast: (Date) -> DayForecast) {
+        // A past day's outfit is assumed worn: parents never have to confirm anything.
         let today = calendar.startOfDay(for: .now)
-        for plan in family.children.flatMap({ $0.plans ?? [] }) where plan.confirmedAt == nil && plan.day < today {
+        for plan in allPlans where plan.confirmedAt == nil && plan.day < today {
             confirm(plan)
         }
-        for child in family.children {
-            if let plan = (child.plans ?? []).first(where: { calendar.isDate($0.day, inSameDayAs: day) }) {
-                guard plan.confirmedAt == nil else { continue }
-                let outfit = plan.outfit
-                let betterForecast = plan.basedOnEstimate && !forecast.isEstimate
-                let missingGarment = outfit.pieces.contains { !isAvailable($0.itemID, for: child) }
-                let untouchedWithGaps = !outfit.gaps.isEmpty && plan.piecesRaw == plan.proposedRaw
-                if betterForecast || missingGarment || untouchedWithGaps {
-                    propose(plan, for: child, forecast: forecast)
+        for day in days {
+            for child in family.children {
+                if let plan = (child.plans ?? []).first(where: { calendar.isDate($0.day, inSameDayAs: day) }) {
+                    guard plan.confirmedAt == nil else { continue }
+                    let untouched = plan.piecesRaw == plan.proposedRaw
+                    let missingGarment = plan.outfit.pieces.contains { !isAvailable($0.itemID, for: child) }
+                    if untouched || missingGarment {
+                        propose(plan, for: child, forecast: forecast(day))
+                    }
+                } else {
+                    let plan = PlannedOutfit(day: calendar.startOfDay(for: day))
+                    context.insert(plan)
+                    plan.child = child
+                    plan.context = child.routine.context(on: day, calendar: calendar)
+                    propose(plan, for: child, forecast: forecast(day))
                 }
-            } else {
-                let plan = PlannedOutfit(day: calendar.startOfDay(for: day))
-                context.insert(plan)
-                plan.child = child
-                plan.context = child.routine.context(on: day, calendar: calendar)
-                propose(plan, for: child, forecast: forecast)
             }
         }
     }
@@ -46,7 +52,7 @@ struct DayPlanner {
             plan.skippedIDs.append(current)
         }
         let options = engine.alternatives(
-            for: slot, in: outfit, child: profile, items: family.items, weather: forecast, context: plan.context
+            for: slot, in: outfit, child: profile, items: items(before: plan.day), weather: forecast, context: plan.context
         )
         guard let next = options.first(where: { !plan.skippedIDs.contains($0) }) ?? options.first else { return }
         if options.allSatisfy({ plan.skippedIDs.contains($0) }) { plan.skippedIDs = [] }
@@ -78,12 +84,29 @@ struct DayPlanner {
         plan.confirmedAt = .now
     }
 
+    private var allPlans: [PlannedOutfit] {
+        family.children.flatMap { $0.plans ?? [] }
+    }
+
+    /// The wardrobe as it will be on `day`: garments planned for earlier days count as worn.
+    private func items(before day: Date) -> [WardrobeItem] {
+        var plannedOn: [UUID: Date] = [:]
+        for plan in allPlans where plan.confirmedAt == nil && plan.day < day {
+            for piece in plan.outfit.pieces {
+                plannedOn[piece.itemID] = max(plannedOn[piece.itemID] ?? plan.day, plan.day)
+            }
+        }
+        return family.items.map { item in plannedOn[item.id].map(item.worn(on:)) ?? item }
+    }
+
+    /// Writes only what changed, so that re-planning an untouched day is a no-op.
     private func propose(_ plan: PlannedOutfit, for child: Child, forecast: DayForecast) {
         let profile = family.profile(child.id) ?? child.profile
-        plan.outfit = engine.propose(child: profile, items: family.items, weather: forecast, context: plan.context)
+        let outfit = engine.propose(child: profile, items: items(before: plan.day), weather: forecast, context: plan.context)
+        guard outfit != plan.outfit || plan.piecesRaw != plan.proposedRaw else { return }
+        plan.outfit = outfit
         plan.proposedRaw = plan.piecesRaw
         plan.skippedIDs = []
-        plan.basedOnEstimate = forecast.isEstimate
     }
 
     private func isAvailable(_ id: UUID, for child: Child) -> Bool {

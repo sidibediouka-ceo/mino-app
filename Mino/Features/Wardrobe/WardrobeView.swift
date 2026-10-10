@@ -16,18 +16,15 @@ struct WardrobeView: View {
     }
 
     private var currentChild: Child? {
-        if case .child(let id) = currentScope { return children.first { $0.id == id } }
-        return nil
+        currentScope.child(in: children)
     }
 
     var body: some View {
-        let inScope = garments.filter { currentScope.contains($0) }
         let profile = currentChild?.profile
-        let outgrown = profile.map { profile in inScope.filter { profile.fit(of: $0.item, on: .now) == .tooSmall } } ?? []
-        let visible = inScope.filter { garment in
-            guard let profile else { return true }
-            return filter.accepts(profile.fit(of: garment.item, on: .now))
-        }
+        let outgrown = profile.map { profile in
+            garments.filter { currentScope.contains($0) && profile.fit(of: $0.item, on: .now) == .tooSmall }
+        } ?? []
+        let visible = currentScope.visible(garments, profile: profile, filter: filter)
 
         NavigationStack {
             ScrollView {
@@ -43,7 +40,7 @@ struct WardrobeView: View {
                     if !outgrown.isEmpty, let child = currentChild {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(Formatting.count(outgrown.count, "vêtement trop petit", "vêtements trop petits"))
+                                Text(Formatting.count(outgrown.count, "vêtement devenu petit", "vêtements devenus petits"))
                                     .font(.headline)
                                     .foregroundStyle(Theme.ink)
                                 Text("Une minute pour leur trouver une suite.")
@@ -53,7 +50,7 @@ struct WardrobeView: View {
                             Spacer()
                             Button("Trier") { sortBatch = SortBatch(garments: outgrown) }
                                 .buttonStyle(SecondaryButtonStyle())
-                                .accessibilityHint("Trier les vêtements devenus trop petits pour \(child.name)")
+                                .accessibilityHint("Trier les vêtements devenus petits pour \(child.name)")
                         }
                         .minoCard()
                     }
@@ -77,6 +74,7 @@ struct WardrobeView: View {
             .background(Theme.background)
             .navigationTitle("Dressing")
             .navigationDestination(for: Garment.self) { GarmentDetailView(garment: $0) }
+            .navigationDestination(for: CategoryPage.self) { CategoryGarmentsView(page: $0) }
             .overlay(alignment: .bottomTrailing) {
                 if currentScope.acceptsNewGarments && !visible.isEmpty {
                     Button { adding = true } label: {
@@ -139,29 +137,38 @@ struct WardrobeView: View {
         }
     }
 
+    /// Three garments per category keep every category within reach; "Voir tout" opens the rest.
     private func grid(_ items: [Garment], profile: ChildProfile?) -> some View {
         let groups = GarmentCategory.allCases.compactMap { category -> (GarmentCategory, [Garment])? in
             let matching = items.filter { $0.category == category }
             return matching.isEmpty ? nil : (category, matching)
         }
-        return VStack(alignment: .leading, spacing: 20) {
+        return VStack(alignment: .leading, spacing: 22) {
             ForEach(groups, id: \.0) { group in
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("\(group.0.displayName) · \(group.1.count)")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.secondaryText)
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 12)], spacing: 12) {
-                        ForEach(group.1) { garment in
-                            NavigationLink(value: garment) {
-                                GarmentTile(garment: garment, fit: profile?.fit(of: garment.item, on: .now))
+                    HStack {
+                        Text("\(group.0.displayName) · \(group.1.count)")
+                            .font(.system(.headline, design: .rounded))
+                            .foregroundStyle(Theme.ink)
+                        Spacer()
+                        if group.1.count > Self.previewCount {
+                            NavigationLink(value: CategoryPage(category: group.0, scope: currentScope, filter: filter)) {
+                                HStack(spacing: 2) {
+                                    Text("Voir tout")
+                                    Image(systemName: "chevron.right").font(.caption.weight(.bold))
+                                }
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(Theme.accent)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
+                    GarmentGrid(garments: Array(group.1.prefix(Self.previewCount)), profile: profile)
                 }
             }
         }
     }
+
+    private static let previewCount = 3
 
     @ViewBuilder
     private var secondLife: some View {
@@ -175,6 +182,43 @@ struct WardrobeView: View {
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
             .padding(.top, 8)
+        }
+    }
+}
+
+/// Every garment of one category, opened from "Voir tout".
+private struct CategoryGarmentsView: View {
+    let page: CategoryPage
+
+    @Query(sort: \Child.createdAt) private var children: [Child]
+    @Query(sort: \Garment.createdAt, order: .reverse) private var garments: [Garment]
+
+    var body: some View {
+        let profile = page.scope.child(in: children)?.profile
+        let items = page.scope.visible(garments, profile: profile, filter: page.filter).filter { $0.category == page.category }
+        ScrollView {
+            GarmentGrid(garments: items, profile: profile)
+                .padding(20)
+        }
+        .background(Theme.background)
+        .navigationTitle("\(page.category.displayName) · \(items.count)")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+/// Three columns of garment tiles, each opening its detail.
+private struct GarmentGrid: View {
+    let garments: [Garment]
+    let profile: ChildProfile?
+
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 14) {
+            ForEach(garments) { garment in
+                NavigationLink(value: garment) {
+                    GarmentTile(garment: garment, fit: profile?.fit(of: garment.item, on: .now))
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 }
@@ -194,7 +238,7 @@ private struct GarmentTile: View {
                             .padding(.vertical, 3)
                             .padding(.horizontal, 7)
                             .foregroundStyle(.white)
-                            .background(fit == .tooSmall ? Theme.accent : Theme.ink.opacity(0.75), in: Capsule())
+                            .background(Theme.ink.opacity(0.7), in: Capsule())
                             .padding(6)
                     }
                 }
@@ -214,7 +258,7 @@ private struct GarmentTile: View {
         default: break
         }
         switch fit {
-        case .tooSmall: return "Trop petit"
+        case .tooSmall: return "Devenu petit"
         case .roomy, .tooBig: return "Plus tard"
         default: return nil
         }
@@ -237,6 +281,20 @@ enum WardrobeScope: Hashable {
         }
     }
 
+    func child(in children: [Child]) -> Child? {
+        if case .child(let id) = self { return children.first { $0.id == id } }
+        return nil
+    }
+
+    /// The garments shown for this scope; for a child, narrowed by how they fit.
+    func visible(_ garments: [Garment], profile: ChildProfile?, filter: FitFilter) -> [Garment] {
+        garments.filter { garment in
+            guard contains(garment) else { return false }
+            guard let profile else { return true }
+            return filter.accepts(profile.fit(of: garment.item, on: .now))
+        }
+    }
+
     var acceptsNewGarments: Bool {
         switch self {
         case .child, .boxes: return true
@@ -252,7 +310,7 @@ enum FitFilter: CaseIterable {
         switch self {
         case .all: return "Tout"
         case .fits: return "À sa taille"
-        case .outgrown: return "Trop petits"
+        case .outgrown: return "Devenus petits"
         case .later: return "Pour plus tard"
         }
     }
@@ -265,6 +323,13 @@ enum FitFilter: CaseIterable {
         case .later: return fit == .roomy || fit == .tooBig
         }
     }
+}
+
+/// Navigation value for a category's full list.
+struct CategoryPage: Hashable {
+    let category: GarmentCategory
+    let scope: WardrobeScope
+    let filter: FitFilter
 }
 
 struct SortBatch: Identifiable {

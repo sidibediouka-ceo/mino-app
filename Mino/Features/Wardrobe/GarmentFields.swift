@@ -108,7 +108,7 @@ struct GarmentFields: View {
         case .fits: return "À la taille de \(child.name)"
         case .roomy: return "Un peu grand pour \(child.name)"
         case .tooBig: return "Pour plus tard"
-        case .tooSmall: return "Trop petit pour \(child.name)"
+        case .tooSmall: return "Déjà petit pour \(child.name)"
         }
     }
 
