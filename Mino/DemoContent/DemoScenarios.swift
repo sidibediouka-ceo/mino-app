@@ -151,7 +151,14 @@ private struct DemoLibrary {
             Item(image: "leggings-pink", category: .pants, color: .pink),
             Item(image: "skirt-pink", category: .shorts, color: .pink),
             Item(image: "jacket-denim", category: .lightJacket, color: .denim),
-            Item(image: "jacket-flowers", category: .lightJacket, color: .multicolor)
+            Item(image: "jacket-flowers", category: .lightJacket, color: .multicolor),
+            Item(image: "tights-grey", category: .tights, color: .grey),
+            Item(image: "tights-pink", category: .tights, color: .pink),
+            Item(image: "tights-dots", category: .tights, color: .white),
+            Item(image: "tights-navy", category: .tights, color: .navy),
+            Item(image: "sneakers-flowers", category: .sneakers, color: .white, size: 33),
+            Item(image: "sneakers-lilac", category: .sneakers, color: .purple, size: 33),
+            Item(image: "sneakers-camel", category: .sneakers, color: .brown, size: 33)
         ]
         for (index, item) in items.enumerated() where !owns(jeanne, item) {
             guard let garment = insert(item, state: .active, owner: jeanne) else { continue }
@@ -238,10 +245,10 @@ private struct DemoLibrary {
             [(.top, .longSleeve, .navy), (.bottom, .pants, .denim), (.layer, .cardigan, .white), (.shoes, .sneakers, .white)],
             [(.top, .tshirt, .white), (.bottom, .shorts, .pink), (.legwear, .tights, .grey),
              (.outerwear, .lightJacket, .multicolor), (.shoes, .sneakers, .white)],
-            [(.top, .tshirt, .white), (.bottom, .pants, .pink), (.layer, .sweater, .purple), (.shoes, .sneakers, .white)],
-            [(.onePiece, .dress, .pink), (.legwear, .tights, .grey), (.outerwear, .lightJacket, .denim), (.shoes, .sneakers, .white)],
-            [(.top, .longSleeve, .navy), (.bottom, .shorts, .pink), (.layer, .sweater, .purple), (.shoes, .boots, .brown)],
-            [(.top, .tshirt, .white), (.bottom, .pants, .denim), (.outerwear, .lightJacket, .denim), (.shoes, .sneakers, .white)]
+            [(.top, .tshirt, .white), (.bottom, .pants, .pink), (.layer, .sweater, .purple), (.shoes, .sneakers, .purple)],
+            [(.onePiece, .dress, .pink), (.legwear, .tights, .white), (.outerwear, .lightJacket, .denim), (.shoes, .sneakers, .brown)],
+            [(.top, .longSleeve, .navy), (.bottom, .shorts, .pink), (.legwear, .tights, .navy), (.layer, .sweater, .purple), (.shoes, .sneakers, .purple)],
+            [(.top, .tshirt, .white), (.bottom, .pants, .denim), (.outerwear, .lightJacket, .denim), (.shoes, .sneakers, .brown)]
         ]
         let photo = resource("DemoOutfitPhoto", "jpg")
         var saved = 0
