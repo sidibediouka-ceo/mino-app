@@ -2,8 +2,8 @@ import MinoKit
 import SwiftData
 import SwiftUI
 
-/// Creates or edits a child with the minimum Mino needs: a first name or nickname, an age and
-/// the sizes on the labels of the clothes the child wears now. No date of birth, no sex.
+/// Creates or edits a child with the minimum Mino needs: an age and the sizes on the labels of
+/// the clothes the child wears now. The name is optional. No date of birth, no sex.
 struct ChildFormView: View {
     enum Mode {
         case create
@@ -37,10 +37,10 @@ struct ChildFormView: View {
     var body: some View {
         Form {
             Section {
-                TextField("Prénom ou surnom", text: $name)
+                TextField("Prénom ou surnom (facultatif)", text: $name)
                     .textContentType(.nickname)
             } footer: {
-                Text("Un surnom suffit : il sert seulement à reconnaître ses tenues.")
+                Text("Facultatif : il sert seulement à reconnaître ses tenues quand vous avez plusieurs enfants.")
             }
             Section {
                 Picker("Âge", selection: $ageInMonths) {
@@ -64,7 +64,6 @@ struct ChildFormView: View {
             Section {
                 Button(isCreating ? "Continuer" : "Enregistrer", action: save)
                     .buttonStyle(PrimaryButtonStyle())
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
             }
@@ -114,16 +113,16 @@ struct ChildFormView: View {
     }
 
     private func save() {
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        let typed = name.trimmingCharacters(in: .whitespaces)
         let child: Child
         switch mode {
         case .create:
-            child = Child(name: trimmed, ageInMonths: ageInMonths)
+            child = Child(name: typed.isEmpty ? defaultName() : typed, ageInMonths: ageInMonths)
             context.insert(child)
             recordSizes(for: child)
         case .edit(let existing):
             child = existing
-            child.name = trimmed
+            child.name = typed.isEmpty ? child.name : typed
             // Only an age the parent actually changed replaces the one that keeps counting since entry.
             if ageInMonths != Self.nearestOption(to: child.ageInMonths) {
                 child.ageInMonths = ageInMonths
@@ -134,6 +133,12 @@ struct ChildFormView: View {
             }
         }
         onDone(child)
+    }
+
+    /// "Enfant 1", "Enfant 2"… when the parent prefers not to give a name.
+    private func defaultName() -> String {
+        let count = (try? context.fetchCount(FetchDescriptor<Child>())) ?? 0
+        return "Enfant \(count + 1)"
     }
 
     /// The sizes the parent gave become an approximate growth record.

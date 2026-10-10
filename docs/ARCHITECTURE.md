@@ -4,7 +4,7 @@
 
 | Principe | Traduction technique |
 |---|---|
-| **Vie privée par construction** | Minimisation : un prénom ou surnom, un âge et des tailles, rien de plus. Aucun serveur, aucun compte, aucun SDK tiers. Toute l'analyse d'image se fait sur l'appareil (Apple Vision). La localisation est approximative, ponctuelle et jamais stockée. |
+| **Vie privée par construction** | Minimisation : un âge et des tailles, un prénom ou surnom facultatif, rien de plus. Aucun serveur, aucun compte, aucun SDK tiers. Toute l'analyse d'image se fait sur l'appareil (Apple Vision). La localisation est approximative, ponctuelle et jamais stockée. |
 | **L'intelligence est testable** | Toute la logique métier vit dans `MinoKit` (Swift pur, Foundation seulement). L'app l'intègre comme framework du projet Xcode, sans résolution de package ; le même code est un package Swift testé hors de l'app, même sous Linux. |
 | **Natif et sobre** | SwiftUI, SwiftData, Observation, WeatherKit et Vision, sur iOS 17 minimum. Zéro dépendance externe. |
 | **Aucun code mort** | Chaque type et chaque fonction est utilisé. Pas d'abstraction « au cas où » : un protocole n'apparaît que lorsqu'il a deux implémentations. |
