@@ -70,7 +70,9 @@ struct TodayView: View {
                         reminderInvite
                     }
 
-                    attribution
+                    if !forecast.isEstimate {
+                        weatherAttribution
+                    }
                 }
                 .padding(20)
             }
@@ -180,22 +182,28 @@ struct TodayView: View {
         .minoCard()
     }
 
-    @ViewBuilder
-    private var attribution: some View {
-        if let attribution = weather.attribution {
-            HStack(spacing: 8) {
-                AsyncImage(url: colorScheme == .dark ? attribution.combinedMarkDarkURL : attribution.combinedMarkLightURL) { image in
-                    image.resizable().scaledToFit()
-                } placeholder: {
-                    EmptyView()
-                }
-                .frame(height: 12)
-                Link("Sources météo", destination: attribution.legalPageURL)
+    /// Required by WeatherKit wherever its data is shown: the Apple Weather mark and a link to
+    /// the legal attribution page. Falls back to the text mark while the image loads.
+    private var weatherAttribution: some View {
+        let legalPage = weather.attribution?.legalPageURL ?? URL(string: "https://weatherkit.apple.com/legal-attribution.html")
+        let mark = colorScheme == .dark ? weather.attribution?.combinedMarkDarkURL : weather.attribution?.combinedMarkLightURL
+        return VStack(spacing: 6) {
+            AsyncImage(url: mark) { image in
+                image.resizable().scaledToFit()
+            } placeholder: {
+                Text("\u{F8FF} Météo")
+                    .font(.footnote.weight(.semibold))
             }
-            .font(.caption2)
-            .foregroundStyle(Theme.secondaryText)
-            .frame(maxWidth: .infinity)
+            .frame(height: 14)
+            .accessibilityLabel("Données météo fournies par Apple Météo")
+            if let legalPage {
+                Link("Sources et mentions légales", destination: legalPage)
+                    .font(.caption2)
+            }
         }
+        .foregroundStyle(Theme.secondaryText)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
     }
 
     private func scheduleReminders() async {

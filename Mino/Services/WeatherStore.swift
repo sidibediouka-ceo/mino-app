@@ -23,6 +23,10 @@ final class WeatherStore {
     }
 
     func refresh() async {
+        if attribution == nil {
+            // Needed to credit Apple Weather; it does not depend on the location.
+            attribution = try? await WeatherService.shared.attribution
+        }
         if let lastRefresh, Date.now.timeIntervalSince(lastRefresh) < 30 * 60 { return }
         guard let place = await location.currentLocation() else { return }
         do {
@@ -45,7 +49,6 @@ final class WeatherStore {
                 )
             }
             forecasts = updated
-            attribution = try? await service.attribution
             lastRefresh = .now
             version += 1
         } catch {
