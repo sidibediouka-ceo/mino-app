@@ -17,13 +17,13 @@ FONT = Path(__file__).parent / "fonts" / "Nunito.ttf"
 
 CAPTIONS = {
     1: ("La tenue du jour,", "prête selon la météo"),
-    2: ("La taille d'après,", "anticipée sans stress"),
+    2: ("Anticipez la taille d'après,", "sans mauvaise surprise"),
     3: ("Ce soir,", "demain est déjà prêt"),
     4: ("Toute une pile ajoutée", "en quelques photos"),
     5: ("Son dressing,", "toujours à jour"),
-    6: ("Trop petit ?", "Une annonce prête à publier"),
+    6: ("Chaque vêtement,", "et sa prochaine vie"),
     7: ("Il s'habille seul,", "pièce par pièce"),
-    8: ("Les tenues préparées", "et les souvenirs"),
+    8: ("Toutes les tenues,", "jour après jour"),
 }
 
 
