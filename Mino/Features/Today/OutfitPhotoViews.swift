@@ -3,24 +3,26 @@ import SwiftUI
 import UIKit
 
 /// "Immortaliser la tenue": take a photo or pick one from the library.
-struct OutfitPhotoMenu<Label: View>: View {
+struct OutfitPhotoMenu<MenuLabel: View>: View {
     let onImage: (UIImage) -> Void
-    @ViewBuilder let label: Label
+    @ViewBuilder let label: MenuLabel
 
     @State private var pickerItem: PhotosPickerItem?
     @State private var showingCamera = false
+    @State private var showingLibrary = false
 
     var body: some View {
+        // The library picker is presented by the view, not nested in the menu: a picker inside a
+        // menu is dismissed with it and never shows.
         Menu {
             if CameraPicker.isAvailable {
                 Button("Prendre une photo", systemImage: "camera") { showingCamera = true }
             }
-            PhotosPicker(selection: $pickerItem, matching: .images) {
-                SwiftUI.Label("Choisir dans la photothèque", systemImage: "photo.on.rectangle")
-            }
+            Button("Choisir dans la photothèque", systemImage: "photo.on.rectangle") { showingLibrary = true }
         } label: {
             label
         }
+        .photosPicker(isPresented: $showingLibrary, selection: $pickerItem, matching: .images)
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }
             pickerItem = nil

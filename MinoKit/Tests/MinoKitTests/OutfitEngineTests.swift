@@ -84,6 +84,15 @@ final class OutfitEngineTests: XCTestCase {
         XCTAssertEqual(outfit.reasons.first, "Fraîcheur le matin : le collant, le gilet et le manteau")
     }
 
+    func testCoolDayPutsALongSleeveUnderADress() {
+        let ines = Fixtures.ines
+        let dress = Fixtures.item(.dress, owner: ines, size: 92, color: .pink, occasion: .dressy)
+        let under = Fixtures.item(.longSleeve, owner: ines, size: 92, color: .white)
+        let items = [dress, under, Fixtures.item(.tshirt, owner: ines, size: 92), Fixtures.item(.sneakers, owner: ines, size: 23)]
+        let outfit = engine.propose(child: ines, items: items, weather: Fixtures.weather(morning: 9, high: 14), context: .celebration)
+        XCTAssertEqual(categories(outfit, items), [.longSleeve, .dress, .sneakers])
+    }
+
     func testFreezingPrefersASousPullUnderThePullAndCountsSetsAsOnePiece() {
         let items = [Fixtures.item(.turtleneck, color: .white), Fixtures.item(.longSleeve), Fixtures.item(.sweater, color: .grey), Fixtures.item(.overalls, color: .denim)]
         let outfit = engine.propose(child: leo, items: items, weather: Fixtures.weather(morning: -2, high: 3), context: .home)

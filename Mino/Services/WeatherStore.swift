@@ -13,6 +13,8 @@ final class WeatherStore {
     private(set) var attribution: WeatherAttribution?
     /// Changes whenever new forecasts arrive, so plans can be refreshed.
     private(set) var version = 0
+    /// Location refused: forecasts stay seasonal estimates until the parent allows it.
+    private(set) var locationDenied = false
 
     private let location = LocationProvider()
     @ObservationIgnored private var lastRefresh: Date?
@@ -28,7 +30,9 @@ final class WeatherStore {
             attribution = try? await WeatherService.shared.attribution
         }
         if let lastRefresh, Date.now.timeIntervalSince(lastRefresh) < 30 * 60 { return }
-        guard let place = await location.currentLocation() else { return }
+        let place = await location.currentLocation()
+        locationDenied = location.isDenied
+        guard let place else { return }
         do {
             let service = WeatherService.shared
             let (daily, hourly) = try await service.weather(for: place, including: .daily, .hourly)

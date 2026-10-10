@@ -70,7 +70,9 @@ struct TodayView: View {
                         reminderInvite
                     }
 
-                    if !forecast.isEstimate {
+                    if forecast.isEstimate {
+                        weatherUnavailable
+                    } else {
                         weatherAttribution
                     }
                 }
@@ -180,6 +182,24 @@ struct TodayView: View {
             }
         }
         .minoCard()
+    }
+
+    /// Says why the weather is only a seasonal estimate, and how to get the real one.
+    private var weatherUnavailable: some View {
+        VStack(spacing: 8) {
+            Text(weather.locationDenied
+                 ? "Météo estimée selon la saison : autorisez la localisation pour la météo Apple du jour."
+                 : "Météo estimée selon la saison : la météo Apple n'a pas pu être chargée.")
+                .font(.caption)
+                .multilineTextAlignment(.center)
+            if weather.locationDenied, let settings = URL(string: UIApplication.openSettingsURLString) {
+                Link("Ouvrir les réglages", destination: settings)
+                    .font(.caption.weight(.semibold))
+            }
+        }
+        .foregroundStyle(Theme.secondaryText)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
     }
 
     /// Required by WeatherKit wherever its data is shown: the Apple Weather mark and a link to

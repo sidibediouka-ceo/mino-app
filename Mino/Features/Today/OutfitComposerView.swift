@@ -117,22 +117,18 @@ struct OutfitComposerView: View {
         selection = outfit.pieces
     }
 
-    /// Layers stack (a pull and a gilet, several accessories); every other slot holds one
-    /// garment. A dress or a set replaces top and bottom, and the other way round.
+    /// Layers stack (a pull and a gilet, several accessories); every other slot holds one garment.
+    /// Nothing else is exclusive: a t-shirt under a dress or a salopette, leggings under a dress,
+    /// the parent decides.
     private func toggle(_ garment: Garment) {
         guard let slot = garment.category.slot else { return }
         if selection.contains(where: { $0.itemID == garment.id }) {
             selection.removeAll { $0.itemID == garment.id }
             return
         }
-        let replaced: Set<OutfitSlot>
-        switch slot {
-        case .layer, .accessory: replaced = []
-        case .onePiece: replaced = [.onePiece, .top, .bottom]
-        case .top, .bottom: replaced = [slot, .onePiece]
-        default: replaced = [slot]
+        if slot != .layer && slot != .accessory {
+            selection.removeAll { $0.slot == slot }
         }
-        selection.removeAll { replaced.contains($0.slot) }
         selection.append(OutfitPiece(slot: slot, itemID: garment.id))
     }
 

@@ -47,6 +47,13 @@ public struct OutfitEngine {
             }
         }
 
+        // A dress on a cool day: a long-sleeved top underneath, if there is one.
+        if thermal <= .cool, chosen.contains(where: { $0.item.category == .dress }),
+           let under = rank(.top).first(where: { $0.item.category != .tshirt }) {
+            chosen.append(under)
+            pieces.append(OutfitPiece(slot: .top, itemID: under.item.id))
+        }
+
         // Bare legs under a dress or a short on a cool day: add a collant if there is one.
         if thermal <= .cool, chosen.contains(where: { $0.item.category == .dress || $0.item.category == .shorts }),
            let tights = rank(.legwear).first {
