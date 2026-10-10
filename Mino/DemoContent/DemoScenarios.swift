@@ -67,11 +67,11 @@ enum DemoScenario: CaseIterable, Identifiable {
     var detail: String {
         switch self {
         case .wardrobe: return "Ses vêtements en 9 ans, ceux dont la photo est fournie. Aujourd'hui, Dressing, fiche."
-        case .passage: return "Une mesure à 135,7 cm et trois vêtements devenus petits. Écran Grandir."
-        case .sibling: return "Un 2e enfant et les anciens vêtements de Jeanne. Demain, Mode enfant, Famille."
+        case .passage: return "Une mesure à 135,7 cm et trois affaires devenues petites. Écran Grandir."
+        case .sibling: return "26 vêtements à lui et 4 qui l'attendent dans les cartons. Demain, Mode enfant, Famille."
         case .event: return "Dans 3 jours. Carnet des tenues (calendrier en haut à gauche d'Aujourd'hui)."
         case .journal: return "Les 6 derniers jours, dont une photo de tenue."
-        case .resale: return "Deux vêtements en vente avec leur état. Dressing › Famille › En vente."
+        case .resale: return "Deux paires de baskets devenues petites, en vente. Dressing › Famille › En vente."
         case .photos: return "Enregistre les photos de vêtements fournies, pour tester l'ajout par lot."
         }
     }
@@ -176,14 +176,12 @@ private struct DemoLibrary {
             addGrowth(to: jeanne, daysAgo: 0, height: 135.7, shoe: 33.4)
         }
         let small: [Item] = [
-            Item(image: "tshirt-purple", category: .tshirt, color: .purple, size: 128),
-            Item(image: "pants-grey", category: .pants, color: .grey, size: 128),
-            Item(image: "cardigan-green", category: .cardigan, color: .green, size: 128)
+            Item(image: "sneakers-pink-small", category: .sneakers, color: .pink, size: 31),
+            Item(image: "tights-brown-small", category: .tights, color: .brown, size: 128),
+            Item(image: "tights-taupe-small", category: .tights, color: .beige, size: 128)
         ]
-        if !owns(jeanne, small[0]) {
-            for item in small {
-                insert(item, state: .active, owner: jeanne)
-            }
+        for item in small where !owns(jeanne, item) {
+            insert(item, state: .active, owner: jeanne)
         }
         return "Prêt : ouvrez Grandir › Jeanne."
     }
@@ -197,27 +195,45 @@ private struct DemoLibrary {
             return created
         }()
         let own: [Item] = [
-            Item(image: "tshirt-blue", category: .tshirt, color: .blue, size: 104),
-            Item(image: "tshirt-green", category: .tshirt, color: .green, size: 104),
-            Item(image: "longsleeve-red", category: .longSleeve, color: .red, size: 110),
-            Item(image: "sweater-grey", category: .sweater, color: .grey, size: 110),
-            Item(image: "pants-navy", category: .pants, color: .navy, size: 104),
-            Item(image: "pants-denim", category: .pants, color: .denim, size: 110),
-            Item(image: "coat-navy", category: .coat, color: .navy, size: 110),
-            Item(image: "sneakers-blue", category: .sneakers, color: .blue, size: 26)
+            Item(image: "leon-hoodie-sage", category: .sweater, color: .green, size: 104),
+            Item(image: "leon-overalls-denim", category: .overalls, color: .denim, size: 104),
+            Item(image: "leon-chino-khaki", category: .pants, color: .beige, size: 104),
+            Item(image: "leon-jacket-corduroy", category: .lightJacket, color: .orange, size: 104),
+            Item(image: "leon-vest-quilted", category: .cardigan, color: .green, size: 104),
+            Item(image: "leon-joggers-blue", category: .pants, color: .blue, size: 104, occasion: .sport),
+            Item(image: "leon-longsleeve-dino", category: .longSleeve, color: .white, size: 104),
+            Item(image: "leon-pajamas-stars", category: .pajamas, color: .navy, size: 104),
+            Item(image: "leon-mariniere", category: .longSleeve, color: .navy, size: 104),
+            Item(image: "leon-sweat-zip-sage", category: .sweater, color: .green, size: 110),
+            Item(image: "leon-shirt-oxford", category: .longSleeve, color: .blue, size: 104, occasion: .dressy),
+            Item(image: "leon-jacket-work", category: .lightJacket, color: .beige, size: 104),
+            Item(image: "leon-cargo-beige", category: .pants, color: .beige, size: 110),
+            Item(image: "leon-sweat-dino", category: .sweater, color: .grey, size: 104),
+            Item(image: "leon-shorts-navy", category: .shorts, color: .navy, size: 104),
+            Item(image: "leon-raincoat-sage", category: .raincoat, color: .green, size: 104),
+            Item(image: "leon-beanie-stripes", category: .coldAccessory, color: .navy, size: 104),
+            Item(image: "leon-bomber-khaki", category: .lightJacket, color: .green, size: 110),
+            Item(image: "leon-henley-rust", category: .tshirt, color: .orange, size: 104),
+            Item(image: "leon-pants-corduroy-green", category: .pants, color: .green, size: 104),
+            Item(image: "leon-sweat-bear", category: .sweater, color: .beige, size: 104),
+            Item(image: "leon-shirt-check", category: .longSleeve, color: .multicolor, size: 104),
+            Item(image: "leon-puffer-grey", category: .coat, color: .grey, size: 110),
+            Item(image: "leon-cardigan-mustard", category: .cardigan, color: .yellow, size: 104),
+            Item(image: "leon-pants-tech-green", category: .pants, color: .green, size: 110, occasion: .sport),
+            Item(image: "leon-overshirt-navy", category: .lightJacket, color: .navy, size: 104)
         ]
         for item in own where !owns(leon, item) {
             insert(item, state: .active, owner: leon)
         }
         // Jeanne's old clothes, waiting in the family boxes: they fit Léon now.
         let boxes: [Item] = [
-            Item(image: "sweater-yellow", category: .sweater, color: .yellow, size: 110),
-            Item(image: "raincoat-red", category: .raincoat, color: .red, size: 110),
-            Item(image: "longsleeve-white", category: .longSleeve, color: .white, size: 110),
-            Item(image: "pants-beige", category: .pants, color: .beige, size: 110)
+            Item(image: "leon-sweater-stripes", category: .sweater, color: .white, size: 110),
+            Item(image: "leon-raincoat-yellow", category: .raincoat, color: .yellow, size: 110),
+            Item(image: "leon-jeans", category: .pants, color: .denim, size: 110),
+            Item(image: "leon-vest-fleece", category: .cardigan, color: .white, size: 110)
         ]
         let stored = ((try? context.fetch(FetchDescriptor<Garment>())) ?? []).filter { $0.state == .stored }
-        for item in boxes where !stored.contains(where: { $0.category == item.category && $0.color == item.color && $0.size == item.size }) {
+        for item in boxes where !stored.contains(where: { $0.photo == photo(of: item) }) {
             insert(item, state: .stored, owner: nil)?.lastOwnerID = jeanne.id
         }
         let waiting = ((try? context.fetch(FetchDescriptor<Garment>())) ?? []).filter { $0.state == .stored }.count
@@ -271,8 +287,8 @@ private struct DemoLibrary {
     private func resale() -> String {
         let jeanne = preparedJeanne()
         let items: [(Item, Condition)] = [
-            (Item(image: "dress-yellow", category: .dress, color: .yellow, size: 128), .veryGood),
-            (Item(image: "sweater-yellow", category: .sweater, color: .yellow, size: 128), .good)
+            (Item(image: "sneakers-leopard-sale", category: .sneakers, color: .multicolor, size: 31), .veryGood),
+            (Item(image: "sneakers-gold-sale", category: .sneakers, color: .yellow, size: 32), .good)
         ]
         let listed = (try? context.fetch(FetchDescriptor<Garment>())) ?? []
         guard !listed.contains(where: { $0.state == .forSale }) else { return "Déjà en vente." }
@@ -312,8 +328,14 @@ private struct DemoLibrary {
         return children.first { $0.name == name }
     }
 
+    /// Recognised by its photo, so two garments of the same kind, colour and size stay distinct.
     private func owns(_ child: Child, _ item: Item) -> Bool {
-        (child.garments ?? []).contains { $0.category == item.category && $0.color == item.color && $0.size == item.size }
+        let picture = photo(of: item)
+        return (child.garments ?? []).contains { $0.photo == picture }
+    }
+
+    private func photo(of item: Item) -> Data? {
+        resource("DemoGarment-\(item.image)", "png")
     }
 
     private func addGrowth(to child: Child, daysAgo: Double, height: Double, shoe: Double) {
@@ -325,9 +347,9 @@ private struct DemoLibrary {
     /// Only garments with a real photo are created: the screenshots must look like the App Store page.
     @discardableResult
     private func insert(_ item: Item, state: LifecycleState, owner: Child?) -> Garment? {
-        guard let photo = resource("DemoGarment-\(item.image)", "png") else { return nil }
+        guard let picture = photo(of: item) else { return nil }
         let garment = Garment(
-            photo: photo, category: item.category, color: item.color,
+            photo: picture, category: item.category, color: item.color,
             size: item.size, occasion: item.occasion, brand: "", state: state
         )
         context.insert(garment)
