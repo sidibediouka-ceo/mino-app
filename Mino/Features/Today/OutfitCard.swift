@@ -10,12 +10,13 @@ struct OutfitCard: View {
     let family: FamilySnapshot
     /// Family garments that would fit this child today (boxes, outgrown by a sibling).
     let availableFromFamily: Int
-    let onSwap: (OutfitSlot) -> Void
+    let onSwap: (UUID) -> Void
     let onContext: (DayContext) -> Void
     let onDressing: () -> Void
     let onGaps: () -> Void
     let onAddGarments: () -> Void
     let onTakeFromFamily: () -> Void
+    let onEdit: () -> Void
 
     private var isDone: Bool { plan.confirmedAt != nil }
 
@@ -44,11 +45,11 @@ struct OutfitCard: View {
                     HStack(spacing: 12) {
                         ForEach(outfit.pieces, id: \.itemID) { piece in
                             if let garment = family.garment(piece.itemID) {
-                                Button { onSwap(piece.slot) } label: {
+                                Button { onSwap(piece.itemID) } label: {
                                     VStack(spacing: 6) {
                                         GarmentImage(photo: garment.photo)
                                             .frame(width: 118, height: 118)
-                                        Text(piece.slot.displayName)
+                                        Text(garment.category.displayName)
                                             .font(.system(.caption, design: .rounded).weight(.medium))
                                             .foregroundStyle(Theme.secondaryText)
                                     }
@@ -95,10 +96,15 @@ struct OutfitCard: View {
                         Label("Habiller \(child.name)", systemImage: "sparkles")
                     }
                     .buttonStyle(PrimaryButtonStyle(color: color))
-                    Text("Toucher un vêtement pour voir d'autres options.")
-                        .font(.caption)
-                        .foregroundStyle(Theme.secondaryText)
-                        .frame(maxWidth: .infinity)
+                    HStack {
+                        Text("Toucher un vêtement pour voir d'autres options.")
+                            .font(.caption)
+                            .foregroundStyle(Theme.secondaryText)
+                        Spacer()
+                        Button("Ajouter ou changer", systemImage: "plus.circle", action: onEdit)
+                            .font(.system(.caption, design: .rounded).weight(.semibold))
+                            .foregroundStyle(Theme.accent)
+                    }
                 }
             }
         }

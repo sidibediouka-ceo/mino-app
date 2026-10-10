@@ -60,7 +60,8 @@ La frontière est nette : l'app traduit ses objets SwiftData en **valeurs immuab
 1. **Ressenti** : 60 % la température ressentie du matin, 40 % le maximum de l'après-midi, réparti en six bandes (de très froid à chaud).
 2. **Couches requises** selon le ressenti, la pluie et le contexte (École, Sport, Sortie, Fête, Maison).
 3. **Score par pièce** : adéquation à la météo, adéquation au contexte, préférence apprise, rotation (une pièce portée la veille se repose), ajustement, et une petite variation stable par jour pour départager deux pièces équivalentes.
-4. **Combinaison haut et bas** avec harmonie des couleurs (les neutres vont avec tout, deux couleurs vives différentes se heurtent). Une robe est comparée à la meilleure paire haut-bas.
+4. **Combinaison haut et bas** avec harmonie des couleurs (les neutres vont avec tout, deux couleurs vives différentes se heurtent). Une pièce unique (robe, ensemble) est comparée à la meilleure paire haut-bas (la salopette compte comme un bas). Par temps frais, un collant s'ajoute sous une robe ou un short ; un sous-pull passe devant un haut ordinaire quand il fait froid.
+   Une tenue peut superposer plusieurs couches (pull et gilet) : on échange une pièce à la fois (`Outfit.replacing(_:with:)`), les autres restent en place.
 5. **Explications** : une ou deux phrases, et les **manques** (« Rien à sa taille pour : manteau »).
 
 ### Le copilote invisible

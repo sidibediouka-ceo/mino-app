@@ -21,7 +21,7 @@ public struct OutfitEngine {
         var pieces: [OutfitPiece] = []
         var gaps: [OutfitSlot] = []
 
-        let tops = rank(.top), bottoms = rank(.bottom), dresses = rank(.dress)
+        let tops = rank(.top), bottoms = rank(.bottom), onePieces = rank(.onePiece)
         var bestCombo: (top: Candidate, bottom: Candidate, score: Double)?
         for top in tops.prefix(5) {
             for bottom in bottoms.prefix(5) {
@@ -29,10 +29,10 @@ public struct OutfitEngine {
                 if score > bestCombo?.score ?? -.infinity { bestCombo = (top, bottom, score) }
             }
         }
-        let dressScore = dresses.first.map { $0.score * 2 - 0.5 + (context == .celebration ? 1 : 0) }
-        if let dress = dresses.first, let dressScore, dressScore > bestCombo?.score ?? -.infinity {
-            chosen.append(dress)
-            pieces.append(OutfitPiece(slot: .dress, itemID: dress.item.id))
+        let onePieceScore = onePieces.first.map { $0.score * 2 - 0.5 + (context == .celebration ? 1 : 0) }
+        if let onePiece = onePieces.first, let onePieceScore, onePieceScore > bestCombo?.score ?? -.infinity {
+            chosen.append(onePiece)
+            pieces.append(OutfitPiece(slot: .onePiece, itemID: onePiece.item.id))
         } else if let bestCombo {
             chosen += [bestCombo.top, bestCombo.bottom]
             pieces += [OutfitPiece(slot: .top, itemID: bestCombo.top.item.id), OutfitPiece(slot: .bottom, itemID: bestCombo.bottom.item.id)]
@@ -45,6 +45,13 @@ public struct OutfitEngine {
                     gaps.append(slot)
                 }
             }
+        }
+
+        // Bare legs under a dress or a short on a cool day: add a collant if there is one.
+        if thermal <= .cool, chosen.contains(where: { $0.item.category == .dress || $0.item.category == .shorts }),
+           let tights = rank(.legwear).first {
+            chosen.append(tights)
+            pieces.append(OutfitPiece(slot: .legwear, itemID: tights.item.id))
         }
 
         if thermal <= .cool {
@@ -77,15 +84,17 @@ public struct OutfitEngine {
         return Outfit(pieces: pieces, gaps: gaps, reasons: reasons(weather: weather, context: context, chosen: chosen.map(\.item)))
     }
 
-    /// Other suitable garments for `slot`, best first, excluding the one currently in the outfit.
+    /// Other suitable garments for the slot of `itemID`, best first, excluding every piece
+    /// already in the outfit.
     public func alternatives(
-        for slot: OutfitSlot, in outfit: Outfit,
+        to itemID: UUID, in outfit: Outfit,
         child: ChildProfile, items: [WardrobeItem], weather: DayForecast, context: DayContext
     ) -> [UUID] {
-        let current = outfit.pieces.first { $0.slot == slot }?.itemID
+        guard let slot = outfit.pieces.first(where: { $0.itemID == itemID })?.slot else { return [] }
+        let worn = Set(outfit.pieces.map(\.itemID))
         return candidates(for: slot, child: child, items: items, weather: weather, context: context)
             .map(\.item.id)
-            .filter { $0 != current }
+            .filter { !worn.contains($0) }
     }
 
     // MARK: Scoring
@@ -93,10 +102,10 @@ public struct OutfitEngine {
     private func candidates(
         for slot: OutfitSlot, child: ChildProfile, items: [WardrobeItem], weather: DayForecast, context: DayContext
     ) -> [Candidate] {
-        if context == .sport && slot == .dress { return [] }
         let day = calendar.startOfDay(for: weather.date)
         return items.compactMap { item -> Candidate? in
             guard item.ownerID == child.id, item.state == .active, item.category.slot == slot,
+                  !(context == .sport && item.category == .dress),
                   let suitability = Self.suitability(of: item.category, for: weather) else { return nil }
             let fit = child.fit(of: item, on: weather.date)
             guard fit.isWearable else { return nil }
@@ -130,13 +139,26 @@ public struct OutfitEngine {
         case (.tshirt, .cool): return 0.2
         case (.longSleeve, .freezing), (.longSleeve, .cold), (.longSleeve, .cool): return 2
         case (.longSleeve, .mild): return 1
+        case (.turtleneck, .freezing): return 2.6
+        case (.turtleneck, .cold): return 2.2
+        case (.turtleneck, .cool): return 1.2
         case (.sweater, .freezing), (.sweater, .cold), (.sweater, .cool): return 2
+        case (.cardigan, .freezing): return 1.4
+        case (.cardigan, .cold): return 1.8
+        case (.cardigan, .cool): return 2.2
         case (.dress, .hot), (.dress, .warm): return 2
         case (.dress, .mild): return 1.5
         case (.dress, .cool): return 0.5
+        case (.playsuit, .freezing): return 0.5
+        case (.playsuit, .cold), (.playsuit, .hot): return 1
+        case (.playsuit, _): return 1.5
         case (.pants, .freezing), (.pants, .cold), (.pants, .cool): return 2
         case (.pants, .mild): return 1.5
         case (.pants, .warm): return 0
+        case (.overalls, .freezing), (.overalls, .cold), (.overalls, .cool): return 2
+        case (.overalls, .mild): return 1.5
+        case (.tights, .freezing), (.tights, .cold): return 2
+        case (.tights, .cool): return 1.5
         case (.shorts, .hot), (.shorts, .warm): return 2
         case (.shorts, .mild): return 0.3
         case (.lightJacket, .cool): return rainy ? 1 : 2
@@ -185,7 +207,7 @@ public struct OutfitEngine {
         case .hot: feel = "Chaud"
         }
         let warmth = chosen
-            .filter { [.sweater, .lightJacket, .coat, .coldAccessory].contains($0.category) }
+            .filter { [.turtleneck, .tights, .sweater, .cardigan, .lightJacket, .coat, .coldAccessory].contains($0.category) }
             .map(\.category.definiteName)
         let light = weather.thermal >= .mild ? "une tenue légère" : "une tenue simple"
         var reasons = ["\(feel) : \(warmth.isEmpty ? light : Self.list(warmth))"]
@@ -208,7 +230,7 @@ public struct OutfitEngine {
         }
         if let forgotten = chosen.first(where: { $0.category.rotates && (daysSinceWorn($0) ?? 0) >= 14 }),
            let days = daysSinceWorn(forgotten) {
-            let agreement = forgotten.category == .dress ? "portée" : "porté"
+            let agreement = forgotten.category.isFeminine ? "portée" : "porté"
             let name = forgotten.category.definiteName
             reasons.append("\(name.prefix(1).uppercased() + name.dropFirst()) n'a pas été \(agreement) depuis \(days) jours")
         }

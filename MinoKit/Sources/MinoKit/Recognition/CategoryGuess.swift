@@ -7,7 +7,12 @@ public enum CategoryGuess {
     private static let keywords: [(String, GarmentCategory)] = [
         ("raincoat", .raincoat), ("poncho", .raincoat), ("rain", .raincoat),
         ("t_shirt", .tshirt), ("t-shirt", .tshirt), ("tshirt", .tshirt), ("jersey", .tshirt),
-        ("sweatshirt", .sweater), ("sweater", .sweater), ("cardigan", .sweater), ("hoodie", .sweater),
+        ("turtleneck", .turtleneck), ("polo neck", .turtleneck),
+        ("cardigan", .cardigan),
+        ("tights", .tights), ("pantyhose", .tights), ("stocking", .tights),
+        ("overall", .overalls), ("dungaree", .overalls),
+        ("jumpsuit", .playsuit), ("romper", .playsuit), ("tracksuit", .playsuit),
+        ("sweatshirt", .sweater), ("sweater", .sweater), ("hoodie", .sweater),
         ("jumper", .sweater), ("fleece", .sweater), ("knit", .sweater),
         ("pajama", .pajamas), ("pyjama", .pajamas), ("sleepwear", .pajamas), ("nightwear", .pajamas),
         ("jean", .pants), ("trouser", .pants), ("legging", .pants), ("pant", .pants),

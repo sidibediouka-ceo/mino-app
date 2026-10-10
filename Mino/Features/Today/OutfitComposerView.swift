@@ -18,7 +18,7 @@ struct OutfitComposerView: View {
     @Query private var garments: [Garment]
     @State private var dayContext: DayContext = .outing
     @State private var note = ""
-    @State private var selection: [OutfitSlot: UUID] = [:]
+    @State private var selection: [OutfitPiece] = []
 
     private let calendar = Calendar.current
 
@@ -31,7 +31,7 @@ struct OutfitComposerView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     if !selection.isEmpty {
-                        OutfitBoard(pieces: selection.map { OutfitPiece(slot: $0.key, itemID: $0.value) }, family: family)
+                        OutfitBoard(pieces: selection, family: family)
                             .padding(16)
                             .background(color.opacity(0.13), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                             .animation(.snappy, value: selection)
@@ -62,7 +62,7 @@ struct OutfitComposerView: View {
                             CategoryPicker(
                                 category: category,
                                 garments: wearable.filter { $0.category == category },
-                                selected: Set(selection.values),
+                                selected: Set(selection.map(\.itemID)),
                                 color: color
                             ) { toggle($0) }
                         }
@@ -106,7 +106,7 @@ struct OutfitComposerView: View {
         }
         dayContext = existing.context
         note = existing.note
-        selection = Dictionary(existing.outfit.pieces.map { ($0.slot, $0.itemID) }, uniquingKeysWith: { first, _ in first })
+        selection = existing.outfit.pieces
     }
 
     private func suggest(in family: FamilySnapshot) {
@@ -114,26 +114,26 @@ struct OutfitComposerView: View {
         let outfit = OutfitEngine(calendar: calendar).propose(
             child: profile, items: family.items, weather: weather.forecast(for: day), context: dayContext
         )
-        selection = Dictionary(outfit.pieces.map { ($0.slot, $0.itemID) }, uniquingKeysWith: { first, _ in first })
+        selection = outfit.pieces
     }
 
-    /// One garment per slot; a dress replaces top and bottom, and the other way round.
+    /// Layers stack (a pull and a gilet, several accessories); every other slot holds one
+    /// garment. A dress or a set replaces top and bottom, and the other way round.
     private func toggle(_ garment: Garment) {
         guard let slot = garment.category.slot else { return }
-        if selection[slot] == garment.id {
-            selection[slot] = nil
+        if selection.contains(where: { $0.itemID == garment.id }) {
+            selection.removeAll { $0.itemID == garment.id }
             return
         }
+        let replaced: Set<OutfitSlot>
         switch slot {
-        case .dress:
-            selection[.top] = nil
-            selection[.bottom] = nil
-        case .top, .bottom:
-            selection[.dress] = nil
-        default:
-            break
+        case .layer, .accessory: replaced = []
+        case .onePiece: replaced = [.onePiece, .top, .bottom]
+        case .top, .bottom: replaced = [slot, .onePiece]
+        default: replaced = [slot]
         }
-        selection[slot] = garment.id
+        selection.removeAll { replaced.contains($0.slot) }
+        selection.append(OutfitPiece(slot: slot, itemID: garment.id))
     }
 
     private func save() {
@@ -147,7 +147,7 @@ struct OutfitComposerView: View {
         }
         plan.context = dayContext
         plan.note = note.trimmingCharacters(in: .whitespaces)
-        plan.outfit = Outfit(pieces: selection.map { OutfitPiece(slot: $0.key, itemID: $0.value) }, gaps: [], reasons: [])
+        plan.outfit = Outfit(pieces: selection, gaps: [], reasons: [])
         plan.proposedRaw = []
         plan.skippedIDs = []
         plan.confirmedAt = nil

@@ -74,6 +74,24 @@ final class OutfitEngineTests: XCTestCase {
         XCTAssertEqual(rotated.first { $0.id == plannedBottom }?.lastWornAt, today)
     }
 
+    func testCoolDayAddsTightsUnderADress() {
+        let ines = Fixtures.ines
+        let dress = Fixtures.item(.dress, owner: ines, size: 92, color: .pink, occasion: .dressy)
+        let tights = Fixtures.item(.tights, owner: ines, size: 92, color: .grey)
+        let items = [dress, tights, Fixtures.item(.cardigan, owner: ines, size: 92), Fixtures.item(.sneakers, owner: ines, size: 23), Fixtures.item(.coat, owner: ines, size: 92)]
+        let outfit = engine.propose(child: ines, items: items, weather: Fixtures.weather(morning: 9, high: 14), context: .celebration)
+        XCTAssertEqual(categories(outfit, items), [.tights, .dress, .cardigan, .sneakers, .coat])
+        XCTAssertEqual(outfit.reasons.first, "Fraîcheur le matin : le collant, le gilet et le manteau")
+    }
+
+    func testFreezingPrefersASousPullUnderThePullAndCountsSetsAsOnePiece() {
+        let items = [Fixtures.item(.turtleneck, color: .white), Fixtures.item(.longSleeve), Fixtures.item(.sweater, color: .grey), Fixtures.item(.overalls, color: .denim)]
+        let outfit = engine.propose(child: leo, items: items, weather: Fixtures.weather(morning: -2, high: 3), context: .home)
+        XCTAssertEqual(categories(outfit, items), [.overalls, .turtleneck, .sweater])
+        XCTAssertEqual(GarmentCategory.playsuit.slot, .onePiece)
+        XCTAssertEqual(OutfitPiece(rawValue: "dress=\(UUID().uuidString)")?.slot, .onePiece)
+    }
+
     func testSportExcludesDressesAndPrefersSportswear() {
         let ines = Fixtures.ines
         let dress = Fixtures.item(.dress, owner: ines, size: 92)
@@ -91,7 +109,7 @@ final class OutfitEngineTests: XCTestCase {
         let dress = Fixtures.item(.dress, owner: ines, size: 92, color: .pink, occasion: .dressy)
         let items = [dress, Fixtures.item(.pants, owner: ines, size: 92), Fixtures.item(.tshirt, owner: ines, size: 92), Fixtures.item(.sneakers, owner: ines, size: 23)]
         let outfit = engine.propose(child: ines, items: items, weather: Fixtures.weather(morning: 20, high: 25), context: .celebration)
-        XCTAssertEqual(outfit.pieces.first, OutfitPiece(slot: .dress, itemID: dress.id))
+        XCTAssertEqual(outfit.pieces.first, OutfitPiece(slot: .onePiece, itemID: dress.id))
     }
 
     func testColoursThatClashAreAvoided() {
@@ -107,8 +125,8 @@ final class OutfitEngineTests: XCTestCase {
         let items = [a, b, small, Fixtures.item(.pants)]
         let weather = Fixtures.weather(morning: 15, high: 19)
         let outfit = engine.propose(child: leo, items: items, weather: weather, context: .home)
-        let current = try? XCTUnwrap(outfit.pieces.first { $0.slot == .top }?.itemID)
-        let alternatives = engine.alternatives(for: .top, in: outfit, child: leo, items: items, weather: weather, context: .home)
+        guard let current = outfit.pieces.first(where: { $0.slot == .top })?.itemID else { return XCTFail("no top") }
+        let alternatives = engine.alternatives(to: current, in: outfit, child: leo, items: items, weather: weather, context: .home)
         XCTAssertEqual(alternatives.count, 1)
         XCTAssertNotEqual(alternatives.first, current)
         XCTAssertFalse(alternatives.contains(small.id))
@@ -122,12 +140,17 @@ final class OutfitEngineTests: XCTestCase {
         XCTAssertEqual(outing.reasons.last, "La robe n'a pas été portée depuis 20 jours")
     }
 
-    func testReplacingKeepsDressingOrderAndPiecesRoundTrip() {
-        let id = UUID()
-        let outfit = Outfit(pieces: [OutfitPiece(slot: .shoes, itemID: UUID()), OutfitPiece(slot: .top, itemID: UUID())], gaps: [], reasons: [])
-        let replaced = outfit.replacing(.top, with: id)
-        XCTAssertEqual(replaced.pieces.map(\.slot), [.top, .shoes])
+    func testReplacingKeepsDressingOrderOtherLayersAndPiecesRoundTrip() {
+        let id = UUID(), top = UUID(), pullover = UUID(), cardigan = UUID()
+        let outfit = Outfit(
+            pieces: [OutfitPiece(slot: .shoes, itemID: UUID()), OutfitPiece(slot: .layer, itemID: pullover),
+                     OutfitPiece(slot: .layer, itemID: cardigan), OutfitPiece(slot: .top, itemID: top)],
+            gaps: [], reasons: []
+        )
+        let replaced = outfit.replacing(top, with: id)
+        XCTAssertEqual(replaced.pieces.map(\.slot), [.top, .layer, .layer, .shoes])
         XCTAssertEqual(replaced.pieces.first?.itemID, id)
+        XCTAssertEqual(outfit.replacing(pullover, with: id).pieces.filter { $0.slot == .layer }.map(\.itemID), [id, cardigan])
         let piece = OutfitPiece(slot: .layer, itemID: id)
         XCTAssertEqual(OutfitPiece(rawValue: piece.rawValue), piece)
         XCTAssertNil(OutfitPiece(rawValue: "nonsense"))

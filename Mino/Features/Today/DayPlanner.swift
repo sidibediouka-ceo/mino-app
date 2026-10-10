@@ -50,19 +50,18 @@ struct DayPlanner {
         }
     }
 
-    /// Replaces one piece with the next best alternative, cycling through all of them.
-    func swap(_ slot: OutfitSlot, in plan: PlannedOutfit, forecast: DayForecast) {
+    /// Replaces one piece with the next best alternative of its kind, cycling through all of
+    /// them; the other layers stay as they are.
+    func swap(_ itemID: UUID, in plan: PlannedOutfit, forecast: DayForecast) {
         guard let child = plan.child, let profile = family.profile(child.id) else { return }
         let outfit = plan.outfit
-        if let current = outfit.pieces.first(where: { $0.slot == slot })?.itemID {
-            plan.skippedIDs.append(current)
-        }
+        plan.skippedIDs.append(itemID)
         let options = engine.alternatives(
-            for: slot, in: outfit, child: profile, items: items(before: plan.day), weather: forecast, context: plan.context
+            to: itemID, in: outfit, child: profile, items: items(before: plan.day), weather: forecast, context: plan.context
         )
         guard let next = options.first(where: { !plan.skippedIDs.contains($0) }) ?? options.first else { return }
         if options.allSatisfy({ plan.skippedIDs.contains($0) }) { plan.skippedIDs = [] }
-        plan.outfit = outfit.replacing(slot, with: next)
+        plan.outfit = outfit.replacing(itemID, with: next)
     }
 
     /// A new context for the day; Mino remembers it for this weekday. An outfit the parent

@@ -23,6 +23,7 @@ struct TodayView: View {
     @State private var dressingPlan: PlannedOutfit?
     @State private var addingFor: Child?
     @State private var handMeDownFor: Child?
+    @State private var editingPlan: PlannedOutfit?
 
     private let calendar = Calendar.current
 
@@ -59,7 +60,8 @@ struct TodayView: View {
                                 onDressing: { dressingPlan = plan },
                                 onGaps: { router.showGrowth(of: child.id) },
                                 onAddGarments: { addingFor = child },
-                                onTakeFromFamily: { handMeDownFor = child }
+                                onTakeFromFamily: { handMeDownFor = child },
+                                onEdit: { editingPlan = plan }
                             )
                         }
                     }
@@ -99,6 +101,11 @@ struct TodayView: View {
         .sheet(isPresented: $showingSettings) { SettingsView() }
         .sheet(isPresented: $showingJournal) { OutfitJournalView() }
         .sheet(item: $handMeDownFor) { HandMeDownView(child: $0, date: .now) }
+        .sheet(item: $editingPlan) { plan in
+            if let child = plan.child {
+                OutfitComposerView(child: child, day: plan.day, existing: plan)
+            }
+        }
         .sheet(item: $addingFor) { child in
             NavigationStack {
                 AddGarmentsView(owner: child, sizing: child.profile) { addingFor = nil }

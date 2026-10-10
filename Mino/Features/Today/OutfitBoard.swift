@@ -1,18 +1,18 @@
 import MinoKit
 import SwiftUI
 
-/// An outfit laid out like a flat-lay: the main pieces large on the left (top or dress, then
-/// bottom), the rest smaller on the right, from head to feet (hat, coat, sweater, shoes).
+/// An outfit laid out like a flat-lay: the main pieces large on the left (top, dress or set,
+/// bottom), the rest smaller on the right, from head to feet (hat, coat, layers, tights, shoes).
 struct OutfitBoard: View {
     let pieces: [OutfitPiece]
     let family: FamilySnapshot
 
-    private static let mainSlots: [OutfitSlot] = [.top, .dress, .bottom]
-    private static let sideSlots: [OutfitSlot] = [.accessory, .outerwear, .layer, .shoes]
+    private static let mainSlots: [OutfitSlot] = [.top, .onePiece, .bottom]
+    private static let sideSlots: [OutfitSlot] = [.accessory, .outerwear, .layer, .legwear, .shoes]
 
     var body: some View {
-        let main = Self.mainSlots.compactMap { slot in pieces.first { $0.slot == slot } }
-        let side = Self.sideSlots.compactMap { slot in pieces.first { $0.slot == slot } }
+        let main = Self.mainSlots.flatMap { slot in pieces.filter { $0.slot == slot } }
+        let side = Self.sideSlots.flatMap { slot in pieces.filter { $0.slot == slot } }
         HStack(alignment: .top, spacing: 10) {
             if !main.isEmpty {
                 VStack(spacing: 10) {

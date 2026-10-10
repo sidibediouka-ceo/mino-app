@@ -2,13 +2,17 @@ import Foundation
 
 /// Slots in the order a child puts them on.
 public enum OutfitSlot: String, CaseIterable, Codable, Sendable {
-    case bottom, top, dress, layer, shoes, outerwear, accessory
+    case legwear, bottom, top
+    /// A dress or a matching set: top and bottom in one.
+    case onePiece = "dress"
+    case layer, shoes, outerwear, accessory
 
     public var displayName: String {
         switch self {
+        case .legwear: return "Collant"
         case .bottom: return "Bas"
         case .top: return "Haut"
-        case .dress: return "Robe"
+        case .onePiece: return "Tenue"
         case .layer: return "Pull"
         case .shoes: return "Chaussures"
         case .outerwear: return "Manteau"
@@ -54,8 +58,9 @@ public struct Outfit: Equatable, Sendable {
         self.reasons = reasons
     }
 
-    public func replacing(_ slot: OutfitSlot, with itemID: UUID) -> Outfit {
-        let others = pieces.filter { $0.slot != slot }
-        return Outfit(pieces: others + [OutfitPiece(slot: slot, itemID: itemID)], gaps: gaps, reasons: reasons)
+    /// Swaps one piece for another of the same slot, keeping the other layers.
+    public func replacing(_ itemID: UUID, with replacement: UUID) -> Outfit {
+        let pieces = self.pieces.map { $0.itemID == itemID ? OutfitPiece(slot: $0.slot, itemID: replacement) : $0 }
+        return Outfit(pieces: pieces, gaps: gaps, reasons: reasons)
     }
 }

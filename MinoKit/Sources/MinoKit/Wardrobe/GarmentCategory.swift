@@ -3,7 +3,8 @@ import Foundation
 /// The categories a parent actually reasons with. Underwear and socks are deliberately absent:
 /// too much input for too little value.
 public enum GarmentCategory: String, CaseIterable, Codable, Sendable {
-    case tshirt, longSleeve, sweater, dress, pants, shorts
+    case tshirt, longSleeve, turtleneck, sweater, cardigan
+    case dress, playsuit, pants, overalls, shorts, tights
     case lightJacket, coat, raincoat
     case sneakers, boots, sandals
     case pajamas, coldAccessory
@@ -12,10 +13,15 @@ public enum GarmentCategory: String, CaseIterable, Codable, Sendable {
         switch self {
         case .tshirt: return "T-shirt"
         case .longSleeve: return "Haut manches longues"
-        case .sweater: return "Pull & gilet"
+        case .turtleneck: return "Sous-pull"
+        case .sweater: return "Pull"
+        case .cardigan: return "Gilet"
         case .dress: return "Robe"
+        case .playsuit: return "Ensemble"
         case .pants: return "Pantalon"
+        case .overalls: return "Salopette"
         case .shorts: return "Short & jupe"
+        case .tights: return "Collant"
         case .lightJacket: return "Veste légère"
         case .coat: return "Manteau"
         case .raincoat: return "Imperméable"
@@ -32,10 +38,15 @@ public enum GarmentCategory: String, CaseIterable, Codable, Sendable {
         switch self {
         case .tshirt: return "le t-shirt"
         case .longSleeve: return "le haut"
+        case .turtleneck: return "le sous-pull"
         case .sweater: return "le pull"
+        case .cardigan: return "le gilet"
         case .dress: return "la robe"
+        case .playsuit: return "l'ensemble"
         case .pants: return "le pantalon"
+        case .overalls: return "la salopette"
         case .shorts: return "le short"
+        case .tights: return "le collant"
         case .lightJacket: return "la veste"
         case .coat: return "le manteau"
         case .raincoat: return "l'imperméable"
@@ -44,6 +55,14 @@ public enum GarmentCategory: String, CaseIterable, Codable, Sendable {
         case .sandals: return "les sandales"
         case .pajamas: return "le pyjama"
         case .coldAccessory: return "le bonnet"
+        }
+    }
+
+    /// Feminine nouns take "portée" in "n'a pas été portée".
+    var isFeminine: Bool {
+        switch self {
+        case .dress, .overalls, .lightJacket: return true
+        default: return false
         }
     }
 
@@ -57,10 +76,11 @@ public enum GarmentCategory: String, CaseIterable, Codable, Sendable {
     /// Where the garment goes in a day outfit; pyjamas are never part of one.
     public var slot: OutfitSlot? {
         switch self {
-        case .tshirt, .longSleeve: return .top
-        case .pants, .shorts: return .bottom
-        case .dress: return .dress
-        case .sweater: return .layer
+        case .tshirt, .longSleeve, .turtleneck: return .top
+        case .pants, .overalls, .shorts: return .bottom
+        case .dress, .playsuit: return .onePiece
+        case .tights: return .legwear
+        case .sweater, .cardigan: return .layer
         case .lightJacket, .coat, .raincoat: return .outerwear
         case .sneakers, .boots, .sandals: return .shoes
         case .coldAccessory: return .accessory
@@ -71,7 +91,7 @@ public enum GarmentCategory: String, CaseIterable, Codable, Sendable {
     /// Whether the outfit engine should avoid repeating it on consecutive days (laundry).
     var rotates: Bool {
         switch slot {
-        case .top, .bottom, .dress, .layer: return true
+        case .top, .bottom, .onePiece, .layer, .legwear: return true
         default: return false
         }
     }
