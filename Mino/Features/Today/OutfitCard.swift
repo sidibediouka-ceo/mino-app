@@ -8,10 +8,14 @@ struct OutfitCard: View {
     let color: Color
     let plan: PlannedOutfit
     let family: FamilySnapshot
+    /// Family garments that would fit this child today (boxes, outgrown by a sibling).
+    let availableFromFamily: Int
     let onSwap: (OutfitSlot) -> Void
     let onContext: (DayContext) -> Void
     let onDressing: () -> Void
     let onGaps: () -> Void
+    let onAddGarments: () -> Void
+    let onTakeFromFamily: () -> Void
 
     private var isDone: Bool { plan.confirmedAt != nil }
 
@@ -28,9 +32,7 @@ struct OutfitCard: View {
             }
 
             if outfit.pieces.isEmpty {
-                Text("Rien dans le dressing ne convient à ce temps-là pour l'instant.")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.secondaryText)
+                emptyWardrobe
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
@@ -97,6 +99,28 @@ struct OutfitCard: View {
         .padding(18)
         .background(color.opacity(0.13), in: RoundedRectangle(cornerRadius: 30, style: .continuous))
         .sensoryFeedback(.success, trigger: plan.confirmedAt)
+    }
+
+    /// A new child, or nothing suited to the weather yet: two ways forward, never a dead end.
+    private var emptyWardrobe: some View {
+        let hasGarments = family.items.contains { $0.ownerID == child.id && $0.state == .active }
+        return VStack(alignment: .leading, spacing: 10) {
+            Text(hasGarments
+                 ? "Rien dans son dressing ne convient encore à ce temps-là."
+                 : "Le dressing de \(child.name) attend ses premiers vêtements.")
+                .font(.subheadline)
+                .foregroundStyle(Theme.secondaryText)
+            Button("Ajouter ses vêtements", systemImage: "camera.fill", action: onAddGarments)
+                .buttonStyle(PrimaryButtonStyle(color: color))
+            if availableFromFamily > 0 {
+                Button(
+                    "Reprendre \(Formatting.count(availableFromFamily, "vêtement", "vêtements")) de la famille",
+                    systemImage: "arrow.triangle.2.circlepath",
+                    action: onTakeFromFamily
+                )
+                .buttonStyle(SecondaryButtonStyle())
+            }
+        }
     }
 
     private var contextMenu: some View {

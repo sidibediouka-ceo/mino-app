@@ -3,7 +3,7 @@ import SwiftData
 import SwiftUI
 
 /// The visual inventory. Each child has their own dressing; the family spaces (boxes, items
-/// for sale, archives) are shared and live in their own section, below.
+/// for sale, archives) are shared and open from the "Famille" button.
 struct WardrobeView: View {
     @Query(sort: \Child.createdAt) private var children: [Child]
     @Query(sort: \Garment.createdAt, order: .reverse) private var garments: [Garment]
@@ -11,6 +11,7 @@ struct WardrobeView: View {
     @State private var filter: FitFilter = .all
     @State private var adding = false
     @State private var sortBatch: SortBatch?
+    @State private var handMeDownFor: Child?
 
     private var child: Child? {
         children.first { $0.id == selectedChildID } ?? children.first
@@ -29,7 +30,6 @@ struct WardrobeView: View {
                     if let child {
                         childDressing(child)
                     }
-                    familySpaces
                 }
                 .padding(20)
                 .padding(.bottom, 72)
@@ -39,6 +39,18 @@ struct WardrobeView: View {
             .navigationDestination(for: Garment.self) { GarmentDetailView(garment: $0) }
             .navigationDestination(for: CategoryPage.self) { CategoryGarmentsView(page: $0) }
             .navigationDestination(for: WardrobeScope.self) { FamilySpaceView(scope: $0) }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        FamilyHubView()
+                    } label: {
+                        Label("Famille", systemImage: "shippingbox")
+                            .labelStyle(.titleAndIcon)
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    }
+                    .accessibilityLabel("Cartons, ventes et archives de la famille")
+                }
+            }
             .overlay(alignment: .bottomTrailing) {
                 if let child, garments.contains(where: { WardrobeScope.child(child.id).contains($0) }) {
                     AddButton { adding = true }
@@ -56,6 +68,7 @@ struct WardrobeView: View {
             .sheet(item: $sortBatch) { batch in
                 SortSessionView(garments: batch.garments, children: children)
             }
+            .sheet(item: $handMeDownFor) { HandMeDownView(child: $0) }
         }
     }
 
@@ -67,8 +80,26 @@ struct WardrobeView: View {
         let profile = child.profile
         let outgrown = garments.filter { scope.contains($0) && profile.fit(of: $0.item, on: .now) == .tooSmall }
         let visible = scope.visible(garments, profile: profile, filter: filter)
+        let fromFamily = FamilySnapshot(children: children, garments: garments).availableGarments(for: child).count
 
         ChipPicker(options: FitFilter.allCases, selection: $filter, title: \.title)
+
+        if fromFamily > 0 {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(Formatting.count(fromFamily, "vêtement", "vêtements")) de la famille")
+                        .font(.system(.headline, design: .rounded))
+                        .foregroundStyle(Theme.ink)
+                    Text("Ils vont à \(child.name) en ce moment : inutile d'acheter.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                Spacer()
+                Button("Voir") { handMeDownFor = child }
+                    .buttonStyle(SecondaryButtonStyle())
+            }
+            .minoCard()
+        }
 
         if !outgrown.isEmpty {
             HStack {
@@ -103,37 +134,7 @@ struct WardrobeView: View {
                 }
             }
         } else {
-            WardrobeSections(garments: visible, profile: profile, scope: scope, filter: filter)
-        }
-    }
-
-    // MARK: Family
-
-    private var familySpaces: some View {
-        let boxes = garments.filter { WardrobeScope.boxes.contains($0) }.count
-        let forSale = garments.filter { WardrobeScope.forSale.contains($0) }.count
-        let archived = garments.filter { WardrobeScope.archive.contains($0) }.count
-        let secondLife = garments.filter { $0.state.hasLeftFamily }.count
-        return VStack(alignment: .leading, spacing: 10) {
-            Text("Pour toute la famille")
-                .font(.system(.title3, design: .rounded).weight(.bold))
-                .foregroundStyle(Theme.ink)
-                .padding(.top, 8)
-            FamilySpaceRow(
-                scope: .boxes, symbol: "shippingbox.fill", count: boxes,
-                subtitle: "Pour plus tard ou pour les plus jeunes"
-            )
-            if forSale > 0 {
-                FamilySpaceRow(scope: .forSale, symbol: "tag.fill", count: forSale, subtitle: "Annonces prêtes à partager")
-            }
-            if archived > 0 {
-                FamilySpaceRow(
-                    scope: .archive, symbol: "leaf.fill", count: archived,
-                    subtitle: secondLife > 0
-                        ? "\(Formatting.count(secondLife, "vêtement a", "vêtements ont")) trouvé une seconde vie"
-                        : "Souvenirs gardés"
-                )
-            }
+            WardrobeSections(garments: visible, profile: profile, scope: scope, filter: filter, children: children)
         }
     }
 }
@@ -171,6 +172,46 @@ private struct ChildSelector: View {
     }
 }
 
+/// The family's shared spaces, with what each child contributed.
+private struct FamilyHubView: View {
+    @Query(sort: \Child.createdAt) private var children: [Child]
+    @Query private var garments: [Garment]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Ce qui n'est plus dans un dressing reste ici : rien ne se perd.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText)
+                row(.boxes, symbol: "shippingbox.fill", fallback: "Pour plus tard ou pour les plus jeunes")
+                row(.forSale, symbol: "tag.fill", fallback: "Mettez un vêtement en vente depuis sa fiche")
+                row(.archive, symbol: "leaf.fill", fallback: "Les vêtements donnés, vendus ou gardés en souvenir")
+            }
+            .padding(20)
+        }
+        .background(Theme.background)
+        .navigationTitle("Famille")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func row(_ scope: WardrobeScope, symbol: String, fallback: String) -> some View {
+        let items = garments.filter { scope.contains($0) }
+        return FamilySpaceRow(
+            scope: scope, symbol: symbol, count: items.count,
+            subtitle: Self.origins(of: items, children: children) ?? fallback
+        )
+    }
+
+    /// "De Léo 5 · Inès 2": each child's share, so nothing gets mixed up.
+    private static func origins(of items: [Garment], children: [Child]) -> String? {
+        let parts = children.compactMap { child -> String? in
+            let count = items.filter { ($0.owner?.id ?? $0.lastOwnerID) == child.id }.count
+            return count > 0 ? "\(child.name) \(count)" : nil
+        }
+        return parts.isEmpty ? nil : "De " + parts.joined(separator: " · ")
+    }
+}
+
 private struct FamilySpaceRow: View {
     let scope: WardrobeScope
     let symbol: String
@@ -194,11 +235,15 @@ private struct FamilySpaceRow: View {
                         .foregroundStyle(Theme.secondaryText)
                 }
                 Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(Theme.secondaryText)
+                if count > 0 || scope.acceptsNewGarments {
+                    Image(systemName: "chevron.right").foregroundStyle(Theme.secondaryText)
+                }
             }
             .minoCard(padding: 14)
         }
         .buttonStyle(.plain)
+        // An empty space with nothing to do there is shown, never opened.
+        .disabled(count == 0 && !scope.acceptsNewGarments)
     }
 }
 
@@ -222,7 +267,7 @@ private struct FamilySpaceView: View {
                         }
                     }
                 } else {
-                    WardrobeSections(garments: items, profile: nil, scope: scope, filter: .all)
+                    WardrobeSections(garments: items, profile: nil, scope: scope, filter: .all, children: children)
                 }
             }
             .padding(20)
@@ -253,6 +298,7 @@ private struct WardrobeSections: View {
     let profile: ChildProfile?
     let scope: WardrobeScope
     let filter: FitFilter
+    let children: [Child]
 
     private static let previewCount = 3
 
@@ -280,7 +326,7 @@ private struct WardrobeSections: View {
                             }
                         }
                     }
-                    GarmentGrid(garments: Array(group.1.prefix(Self.previewCount)), profile: profile)
+                    GarmentGrid(garments: Array(group.1.prefix(Self.previewCount)), profile: profile, children: children)
                 }
             }
         }
@@ -298,7 +344,7 @@ private struct CategoryGarmentsView: View {
         let profile = page.scope.child(in: children)?.profile
         let items = page.scope.visible(garments, profile: profile, filter: page.filter).filter { $0.category == page.category }
         ScrollView {
-            GarmentGrid(garments: items, profile: profile)
+            GarmentGrid(garments: items, profile: profile, children: children)
                 .padding(20)
         }
         .background(Theme.background)
@@ -311,12 +357,16 @@ private struct CategoryGarmentsView: View {
 private struct GarmentGrid: View {
     let garments: [Garment]
     let profile: ChildProfile?
+    let children: [Child]
 
     var body: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 14) {
             ForEach(garments) { garment in
                 NavigationLink(value: garment) {
-                    GarmentTile(garment: garment, fit: profile?.fit(of: garment.item, on: .now))
+                    GarmentTile(
+                        garment: garment, fit: profile?.fit(of: garment.item, on: .now),
+                        origin: garment.owner == nil ? children.first { $0.id == garment.lastOwnerID }?.name : nil
+                    )
                 }
                 .buttonStyle(.plain)
             }
@@ -327,6 +377,8 @@ private struct GarmentGrid: View {
 private struct GarmentTile: View {
     let garment: Garment
     let fit: Fit?
+    /// For garments outside any dressing: the child they came from.
+    let origin: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -343,12 +395,15 @@ private struct GarmentTile: View {
                             .padding(6)
                     }
                 }
-            Text(SizeChart.shortLabel(size: garment.size, kind: garment.category.sizeKind))
+            Text([SizeChart.shortLabel(size: garment.size, kind: garment.category.sizeKind), origin.map { "de \($0)" }]
+                .compactMap { $0 }
+                .joined(separator: " · "))
                 .font(.caption)
                 .foregroundStyle(Theme.secondaryText)
+                .lineLimit(1)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel([garment.summary, badge].compactMap { $0 }.joined(separator: ", "))
+        .accessibilityLabel([garment.summary, badge, origin.map { "de \($0)" }].compactMap { $0 }.joined(separator: ", "))
     }
 
     private var badge: String? {

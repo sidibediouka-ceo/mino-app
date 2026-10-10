@@ -20,6 +20,8 @@ final class Garment {
     var affinity: Double = 0
     var fitConfirmedAt: Double?
     var owner: Child?
+    /// The child who wore it last, kept when it moves to the boxes, a sibling or a second life.
+    var lastOwnerID: UUID?
 
     init(
         photo: Data?, category: GarmentCategory, color: GarmentColor, size: Int,
@@ -67,8 +69,11 @@ final class Garment {
         "\(category.displayName) \(color.displayName.lowercased()) · \(SizeChart.shortLabel(size: size, kind: category.sizeKind))"
     }
 
-    /// Moves the garment to a new place in its life.
+    /// Moves the garment to a new place in its life, remembering whose it was.
     func move(to state: LifecycleState, owner: Child?) {
+        if let previous = self.owner, previous.id != owner?.id {
+            lastOwnerID = previous.id
+        }
         self.state = state
         self.owner = owner
         fitConfirmedAt = nil

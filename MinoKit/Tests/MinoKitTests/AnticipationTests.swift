@@ -40,6 +40,16 @@ final class AnticipationTests: XCTestCase {
         XCTAssertEqual(inesNeeds.first { $0.group == .longBottoms }?.familyStock, [outgrownByLeo.id])
     }
 
+    func testFamilyStockForANewChild() {
+        let outgrownByLeo = Fixtures.item(.pants, owner: leo, size: 86)
+        let stillLeos = Fixtures.item(.pants, owner: leo, size: 110)
+        let boxedRoomy = Fixtures.item(.sweater, owner: nil, size: 98, state: .stored)
+        let boxedFitting = Fixtures.item(.tshirt, owner: nil, size: 92, state: .stored)
+        let donated = Fixtures.item(.tshirt, owner: nil, size: 92, state: .donated)
+        let available = FamilyStock.available(for: ines, family: [leo, ines], items: [outgrownByLeo, stillLeos, boxedRoomy, boxedFitting, donated], on: Fixtures.today)
+        XCTAssertEqual(available.map(\.id), [outgrownByLeo.id, boxedFitting.id, boxedRoomy.id])
+    }
+
     func testLifecycleRecommendations() {
         let fitsInesNow = Fixtures.item(.pants, owner: leo, size: 86)
         XCTAssertEqual(LifecycleAdvisor.recommend(for: fitsInesNow, family: [leo, ines], on: Fixtures.today), .sibling(ines.id, fitsFrom: nil))

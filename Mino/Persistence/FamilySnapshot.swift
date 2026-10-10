@@ -21,6 +21,12 @@ struct FamilySnapshot {
 
     func profile(_ id: UUID) -> ChildProfile? { profiles.first { $0.id == id } }
 
+    /// Family garments `child` could take over today, best fitting first.
+    func availableGarments(for child: Child) -> [Garment] {
+        guard let profile = profile(child.id) else { return [] }
+        return FamilyStock.available(for: profile, family: profiles, items: items, on: .now).compactMap { garment($0.id) }
+    }
+
     func needs(on date: Date, calendar: Calendar) -> [Need] {
         let forecaster = NeedsForecaster(calendar: calendar)
         return profiles.flatMap { forecaster.needs(for: $0, family: profiles, items: items, on: date) }

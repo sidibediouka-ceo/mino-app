@@ -50,7 +50,9 @@ public struct NeedsForecaster {
                 let fitting = own.filter { group.categories.contains($0.category) && child.fit(of: $0, on: checkpoint.date).isWearable }
                 let missing = target - fitting.count
                 guard missing > 0 else { continue }
-                let stock = familyStock(for: child, family: family, items: items, group: group, on: checkpoint.date)
+                let stock = FamilyStock.available(for: child, family: family, items: items, on: checkpoint.date)
+                    .filter { group.categories.contains($0.category) && child.fit(of: $0, on: checkpoint.date) == .fits }
+                    .map(\.id)
                 needs.append(Need(
                     childID: child.id, group: group, season: checkpoint.season, neededBy: checkpoint.date,
                     size: recommendedSize(for: child, kind: group.sizeKind, at: checkpoint.date),
@@ -59,24 +61,6 @@ public struct NeedsForecaster {
             }
         }
         return needs.sorted { ($0.neededBy, -$0.missing) < ($1.neededBy, -$1.missing) }
-    }
-
-    /// Boxed garments, or garments a sibling has outgrown, that will fit `child` on `date`.
-    private func familyStock(for child: ChildProfile, family: [ChildProfile], items: [WardrobeItem], group: NeedGroup, on date: Date) -> [UUID] {
-        let siblings = Dictionary(uniqueKeysWithValues: family.filter { $0.id != child.id }.map { ($0.id, $0) })
-        return items.filter { item in
-            guard group.categories.contains(item.category), child.fit(of: item, on: date) == .fits else { return false }
-            switch item.state {
-            case .stored:
-                return true
-            case .active:
-                guard let ownerID = item.ownerID, let owner = siblings[ownerID] else { return false }
-                return owner.fit(of: item, on: date) == .tooSmall
-            default:
-                return false
-            }
-        }
-        .map(\.id)
     }
 
     private func recommendedSize(for child: ChildProfile, kind: SizeKind, at date: Date) -> Int {

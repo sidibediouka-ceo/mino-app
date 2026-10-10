@@ -18,6 +18,7 @@ struct GarmentDetailView: View {
         let message: String
         let state: LifecycleState
         let owner: Child?
+        let lastOwnerID: UUID?
         let fitConfirmedAt: Double?
     }
 
@@ -163,13 +164,17 @@ struct GarmentDetailView: View {
     }
 
     private func change(_ message: String, _ perform: () -> Void) {
-        let previous = LifecycleChange(message: message, state: garment.state, owner: garment.owner, fitConfirmedAt: garment.fitConfirmedAt)
+        let previous = LifecycleChange(
+            message: message, state: garment.state, owner: garment.owner,
+            lastOwnerID: garment.lastOwnerID, fitConfirmedAt: garment.fitConfirmedAt
+        )
         perform()
         withAnimation(.snappy) { lastChange = previous }
     }
 
     private func undo(_ change: LifecycleChange) {
         garment.move(to: change.state, owner: change.owner)
+        garment.lastOwnerID = change.lastOwnerID
         garment.fitConfirmedAt = change.fitConfirmedAt
         withAnimation(.snappy) { lastChange = nil }
     }

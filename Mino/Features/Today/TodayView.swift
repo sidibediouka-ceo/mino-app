@@ -21,6 +21,8 @@ struct TodayView: View {
     @State private var showingSettings = false
     @State private var showingJournal = false
     @State private var dressingPlan: PlannedOutfit?
+    @State private var addingFor: Child?
+    @State private var handMeDownFor: Child?
 
     private let calendar = Calendar.current
 
@@ -51,10 +53,13 @@ struct TodayView: View {
                         if let plan = plans.first(where: { $0.child?.id == child.id && calendar.isDate($0.day, inSameDayAs: day) }) {
                             OutfitCard(
                                 child: child, color: children.color(of: child), plan: plan, family: family,
+                                availableFromFamily: family.availableGarments(for: child).count,
                                 onSwap: { planner.swap($0, in: plan, forecast: forecast) },
                                 onContext: { planner.setContext($0, for: plan, forecast: forecast) },
                                 onDressing: { dressingPlan = plan },
-                                onGaps: { router.showGrowth(of: child.id) }
+                                onGaps: { router.showGrowth(of: child.id) },
+                                onAddGarments: { addingFor = child },
+                                onTakeFromFamily: { handMeDownFor = child }
                             )
                         }
                     }
@@ -93,6 +98,14 @@ struct TodayView: View {
         }
         .sheet(isPresented: $showingSettings) { SettingsView() }
         .sheet(isPresented: $showingJournal) { OutfitJournalView() }
+        .sheet(item: $handMeDownFor) { HandMeDownView(child: $0) }
+        .sheet(item: $addingFor) { child in
+            NavigationStack {
+                AddGarmentsView(owner: child, sizing: child.profile) { addingFor = nil }
+                    .navigationTitle("Pour \(child.name)")
+                    .navigationBarTitleDisplayMode(.inline)
+            }
+        }
         .fullScreenCover(item: $dressingPlan) { plan in
             DressingTogetherView(
                 childName: plan.child?.name ?? "",
