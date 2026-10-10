@@ -10,7 +10,7 @@ struct MinoApp: App {
     /// additive (new properties with a default) so SwiftData migrates them in place; if the
     /// store ever cannot be opened, Mino says so instead of starting from an empty one.
     private let container: Result<ModelContainer, Error> = Result {
-        try ModelContainer(for: Child.self, GrowthEntry.self, Garment.self, PlannedOutfit.self)
+        try ModelContainer(for: Child.self, GrowthEntry.self, Garment.self, PlannedOutfit.self, CoveredNeed.self)
     }
 
     var body: some Scene {

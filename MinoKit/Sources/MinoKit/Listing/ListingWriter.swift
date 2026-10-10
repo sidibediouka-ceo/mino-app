@@ -24,4 +24,25 @@ public enum ListingWriter {
         lines.append("Il a fait son temps chez nous et attend une seconde vie.")
         return Listing(title: title, description: lines.joined(separator: "\n"))
     }
+
+    /// One listing for several garments, as parents sell outgrown sizes: by the lot.
+    public static func lot(of items: [WardrobeItem]) -> Listing {
+        let clothingSizes = items.filter { $0.category.sizeKind == .clothing }.map(\.size).sorted()
+        let sizeLabel: String?
+        if let smallest = clothingSizes.first, let largest = clothingSizes.last {
+            let low = SizeChart.shortLabel(size: smallest, kind: .clothing)
+            let high = SizeChart.shortLabel(size: largest, kind: .clothing)
+            sizeLabel = low == high ? low : "\(low) à \(high)"
+        } else {
+            sizeLabel = nil
+        }
+        let title = ["Lot de \(items.count) vêtements enfant", sizeLabel].compactMap { $0 }.joined(separator: " · ")
+        let lines = items.map { item in
+            "• \(item.category.displayName) \(item.color.displayName.lowercased()), \(SizeChart.shortLabel(size: item.size, kind: item.category.sizeKind))"
+        }
+        return Listing(
+            title: title,
+            description: (lines + ["", "Ils ont fait leur temps chez nous et attendent une seconde vie, ensemble."]).joined(separator: "\n")
+        )
+    }
 }

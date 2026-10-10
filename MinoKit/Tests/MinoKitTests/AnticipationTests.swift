@@ -2,7 +2,6 @@ import XCTest
 @testable import MinoKit
 
 final class AnticipationTests: XCTestCase {
-    let forecaster = NeedsForecaster(calendar: Fixtures.calendar)
     let leo = Fixtures.leo, ines = Fixtures.ines
 
     /// Autumn wardrobe for Léo that fits today but lacks winter essentials.
@@ -13,14 +12,13 @@ final class AnticipationTests: XCTestCase {
     }
 
     func testNoAdviceForAnAlmostEmptyWardrobe() {
-        XCTAssertTrue(forecaster.needs(for: leo, family: [leo], items: [Fixtures.item(.pants)], on: Fixtures.today).isEmpty)
+        XCTAssertTrue(NeedsForecaster.needs(for: leo, family: [leo], items: [Fixtures.item(.pants)], season: .winter, on: Fixtures.today).isEmpty)
     }
 
-    func testWinterNeedsAreAnticipatedBeforeTheSeason() {
-        let needs = forecaster.needs(for: leo, family: [leo], items: leoAutumn, on: Fixtures.date(2026, 11, 1))
-        let winter = needs.filter { $0.season == .winter }
+    func testWinterNeeds() {
+        let winter = NeedsForecaster.needs(for: leo, family: [leo], items: leoAutumn, season: .winter, on: Fixtures.date(2026, 12, 1))
         XCTAssertEqual(Set(winter.map(\.group)), [.warmOuterwear, .warmShoes, .longSleeveTops, .layers])
-        let coat = try? XCTUnwrap(winter.first { $0.group == .warmOuterwear })
+        let coat = winter.first { $0.group == .warmOuterwear }
         XCTAssertEqual(coat?.missing, 1)
         XCTAssertEqual(coat?.size, 110)
         XCTAssertEqual(coat?.stillMissing, 1)
@@ -29,14 +27,14 @@ final class AnticipationTests: XCTestCase {
     func testFamilyBoxesAndOutgrownSiblingClothesComeFirst() {
         let boxedCoat = Fixtures.item(.coat, owner: nil, size: 110, state: .stored)
         let cousinCoat = Fixtures.item(.coat, owner: nil, size: 110, state: .donated)
-        let needs = forecaster.needs(for: leo, family: [leo, ines], items: leoAutumn + [boxedCoat, cousinCoat], on: Fixtures.date(2026, 11, 1))
+        let needs = NeedsForecaster.needs(for: leo, family: [leo, ines], items: leoAutumn + [boxedCoat, cousinCoat], season: .winter, on: Fixtures.date(2026, 12, 1))
         let coat = needs.first { $0.group == .warmOuterwear }
         XCTAssertEqual(coat?.familyStock, [boxedCoat.id])
         XCTAssertEqual(coat?.stillMissing, 0)
 
         let outgrownByLeo = Fixtures.item(.pants, owner: leo, size: 92)
         let inesItems = (0..<8).map { _ in Fixtures.item(.tshirt, owner: ines, size: 92) }
-        let inesNeeds = forecaster.needs(for: ines, family: [leo, ines], items: inesItems + [outgrownByLeo], on: Fixtures.date(2026, 11, 1))
+        let inesNeeds = NeedsForecaster.needs(for: ines, family: [leo, ines], items: inesItems + [outgrownByLeo], season: .winter, on: Fixtures.date(2026, 12, 1))
         XCTAssertEqual(inesNeeds.first { $0.group == .longBottoms }?.familyStock, [outgrownByLeo.id])
     }
 
@@ -75,21 +73,60 @@ final class AnticipationTests: XCTestCase {
     }
 }
 
-final class BriefingTests: XCTestCase {
-    func testSortThenRetrieveThenMeasure() {
-        let leo = Fixtures.leo
-        let outgrown = Fixtures.item(.pants, size: 92)
-        let boxed = Fixtures.item(.coat, owner: nil, size: 110, state: .stored)
-        let need = Need(childID: leo.id, group: .warmOuterwear, season: .winter, neededBy: Fixtures.today, size: 110, missing: 1, familyStock: [boxed.id])
-        let unmeasured = ChildProfile(id: UUID(), name: "A", estimatedBirth: Fixtures.date(2022, 1, 1), records: [])
-        let briefing = Briefing.compose(family: [unmeasured, leo], items: [outgrown, boxed], needs: [need], on: Fixtures.today)
-        XCTAssertEqual(briefing, [.sort(childID: leo.id, itemIDs: [outgrown.id]), .retrieve(need), .measure(childID: unmeasured.id)])
-        XCTAssertEqual(briefing.map(\.childID), [leo.id, leo.id, unmeasured.id])
+final class PassageTests: XCTestCase {
+    let leo = Fixtures.leo
+
+    func testTheSeasonalSwitchComesFirstWhenTheNextSizeIsFar() {
+        let april = Fixtures.date(2027, 4, 15)
+        let passage = Passage.next(for: leo, on: april, calendar: Fixtures.calendar)
+        XCTAssertEqual(passage.kind, .season(.summer))
+        XCTAssertEqual(passage.date, Fixtures.calendar.startOfDay(for: Fixtures.date(2027, 6, 1)))
+        XCTAssertFalse(passage.isUnderway(on: april))
+        XCTAssertTrue(passage.isUnderway(on: Fixtures.date(2027, 5, 10)))
     }
 
-    func testNothingToDoForAMeasuredChildWithAFittingWardrobe() {
-        let items = (0..<8).map { _ in Fixtures.item(.tshirt) }
-        XCTAssertTrue(Briefing.compose(family: [Fixtures.leo], items: items, needs: [], on: Fixtures.today).isEmpty)
+    func testASwitchThatJustStartedStaysOpenForTwoWeeks() {
+        let passage = Passage.next(for: leo, on: Fixtures.date(2026, 9, 8), calendar: Fixtures.calendar)
+        XCTAssertEqual(passage.kind, .season(.autumn))
+        XCTAssertEqual(passage.season, .autumn)
+    }
+
+    func testTheNextSizeComesFirstWhenItIsSooner() {
+        let growing = ChildProfile(
+            id: UUID(), name: "A", estimatedBirth: Fixtures.date(2022, 10, 10),
+            records: [GrowthRecord(date: Fixtures.today, heightCM: 105.8, shoeSize: 27)]
+        )
+        let passage = Passage.next(for: growing, on: Fixtures.today, calendar: Fixtures.calendar)
+        XCTAssertEqual(passage.kind, .size(110))
+        XCTAssertLessThan(passage.date, Fixtures.date(2027, 6, 1))
+    }
+
+    func testPlanSortsTakesOverAndLists() {
+        let passage = Passage(
+            kind: .season(.autumn),
+            when: DateEstimate(expected: Fixtures.date(2026, 12, 1), earliest: Fixtures.date(2026, 12, 1), latest: Fixtures.date(2026, 12, 1)),
+            season: .winter
+        )
+        let small = Fixtures.item(.tshirt, size: 98)
+        let boxedCoat = Fixtures.item(.coat, owner: nil, size: 110, state: .stored)
+        let wardrobe = (0..<6).map { _ in Fixtures.item(.longSleeve) } + (0..<5).map { _ in Fixtures.item(.pants) }
+            + (0..<3).map { _ in Fixtures.item(.sweater) } + [Fixtures.item(.sneakers)] + (0..<4).map { _ in Fixtures.item(.pajamas) }
+        let plan = PassagePlan(passage: passage, child: leo, family: [leo], items: wardrobe + [small, boxedCoat], covered: [])
+        XCTAssertEqual(plan.outgrown, [small.id])
+        XCTAssertEqual(plan.fromFamily, [boxedCoat.id])
+        XCTAssertEqual(plan.toFind.map(\.group), [.warmShoes])
+        XCTAssertFalse(plan.isReady)
+
+        let boots = plan.toFind[0]
+        let covered = PassagePlan(passage: passage, child: leo, family: [leo], items: wardrobe + [boxedCoat], covered: [boots.id])
+        XCTAssertTrue(covered.isReady)
+    }
+
+    func testNeverReadyWithoutKnowingTheWardrobe() {
+        let passage = Passage.next(for: leo, on: Fixtures.today, calendar: Fixtures.calendar)
+        let plan = PassagePlan(passage: passage, child: leo, family: [leo], items: [Fixtures.item(.tshirt)], covered: [])
+        XCTAssertFalse(plan.knowsWardrobe)
+        XCTAssertFalse(plan.isReady)
     }
 }
 
@@ -117,6 +154,14 @@ final class RecognitionAndListingTests: XCTestCase {
         XCTAssertTrue(listing.description.contains("Style : habillé"))
         XCTAssertTrue(listing.text.hasPrefix(listing.title))
         XCTAssertEqual(ListingWriter.listing(for: item, brand: "  ").title, "Manteau enfant · 4 ans")
+    }
+
+    func testShoppingListAndLot() {
+        let need = Need(childID: UUID(), group: .warmShoes, season: .winter, size: 28, missing: 1, familyStock: [])
+        XCTAssertEqual(ShoppingList.text(for: "Léo", needs: [need]), "Pour Léo :\n• Bottes : 1 en Pointure 28")
+        let lot = ListingWriter.lot(of: [Fixtures.item(.pants, size: 104), Fixtures.item(.tshirt, size: 110)])
+        XCTAssertEqual(lot.title, "Lot de 2 vêtements enfant · 4 ans à 5 ans")
+        XCTAssertTrue(lot.description.contains("• Pantalon marine, 4 ans"))
     }
 
     func testSeasonalEstimate() {

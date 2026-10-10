@@ -53,7 +53,7 @@ struct TodayView: View {
                         if let plan = plans.first(where: { $0.child?.id == child.id && calendar.isDate($0.day, inSameDayAs: day) }) {
                             OutfitCard(
                                 child: child, color: children.color(of: child), plan: plan, family: family,
-                                availableFromFamily: family.availableGarments(for: child).count,
+                                availableFromFamily: family.availableGarments(for: child, on: .now).count,
                                 onSwap: { planner.swap($0, in: plan, forecast: forecast) },
                                 onContext: { planner.setContext($0, for: plan, forecast: forecast) },
                                 onDressing: { dressingPlan = plan },
@@ -98,7 +98,7 @@ struct TodayView: View {
         }
         .sheet(isPresented: $showingSettings) { SettingsView() }
         .sheet(isPresented: $showingJournal) { OutfitJournalView() }
-        .sheet(item: $handMeDownFor) { HandMeDownView(child: $0) }
+        .sheet(item: $handMeDownFor) { HandMeDownView(child: $0, date: .now) }
         .sheet(item: $addingFor) { child in
             NavigationStack {
                 AddGarmentsView(owner: child, sizing: child.profile) { addingFor = nil }

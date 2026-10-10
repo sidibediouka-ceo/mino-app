@@ -1,19 +1,22 @@
-import Charts
 import MinoKit
 import SwiftData
 import SwiftUI
 
-/// "La taille d'après": what to do now, where the child is heading, and what the wardrobe will
-/// need, family boxes first. Everything that asks for a gesture outside the daily outfit lives here.
+/// "Grandir": the tab of passages. Moving into the next size and the big seasonal switch are
+/// the two moments that reshape a wardrobe; Mino prepares each one in three gestures, and
+/// keeps quiet in between. The toise keeps the memory of the child growing.
 struct GrowthView: View {
+    @Environment(\.modelContext) private var context
     @Environment(AppRouter.self) private var router
     @Query(sort: \Child.createdAt) private var children: [Child]
     @Query private var garments: [Garment]
+    @Query private var covered: [CoveredNeed]
     @State private var selectedID: UUID?
     @State private var measuring: Child?
     @State private var adding: Child?
     @State private var editing: Child?
     @State private var sortBatch: SortBatch?
+    @State private var handMeDown: HandMeDownRequest?
 
     private var selected: Child? {
         children.first { $0.id == selectedID } ?? children.first
@@ -30,11 +33,17 @@ struct GrowthView: View {
                     }
                     if let child = selected {
                         let family = FamilySnapshot(children: children, garments: garments)
-                        let needs = family.needs(on: .now, calendar: .current).filter { $0.childID == child.id }
                         let color = children.color(of: child)
-                        toDo(for: child, family: family, needs: needs)
-                        outlook(for: child, color: color)
-                        upcoming(for: child, family: family, needs: needs)
+                        if let plan = family.passagePlan(for: child, covered: covered, calendar: .current) {
+                            PassageCard(
+                                child: child, color: color, plan: plan, family: family,
+                                onSort: { sortBatch = SortBatch(garments: $0, date: plan.passage.date) },
+                                onTakeFromFamily: { handMeDown = HandMeDownRequest(child: child, date: plan.passage.date) },
+                                onCovered: { context.insert(CoveredNeed(needID: $0.id)) },
+                                onAddGarments: { adding = child }
+                            )
+                        }
+                        ToiseCard(child: child, color: color) { measuring = child }
                     }
                 }
                 .padding(20)
@@ -57,7 +66,8 @@ struct GrowthView: View {
                 }
             }
             .sheet(item: $measuring) { MeasureView(child: $0) }
-            .sheet(item: $sortBatch) { SortSessionView(garments: $0.garments, children: children) }
+            .sheet(item: $sortBatch) { SortSessionView(garments: $0.garments, children: children, date: $0.date) }
+            .sheet(item: $handMeDown) { HandMeDownView(child: $0.child, date: $0.date) }
             .sheet(item: $adding) { child in
                 NavigationStack {
                     AddGarmentsView(owner: child, sizing: child.profile) { adding = nil }
@@ -70,242 +80,281 @@ struct GrowthView: View {
             }
         }
     }
-
-    // MARK: To do
-
-    @ViewBuilder
-    private func toDo(for child: Child, family: FamilySnapshot, needs: [Need]) -> some View {
-        let items = Briefing.compose(family: family.profiles, items: family.items, needs: needs, on: .now)
-            .filter { $0.childID == child.id }
-        if !items.isEmpty {
-            sectionTitle("À faire")
-            ForEach(items) { item in
-                BriefingCard(content: content(for: item, child: child)) {
-                    perform(item, child: child, family: family)
-                }
-            }
-        }
-    }
-
-    private func content(for item: BriefingItem, child: Child) -> BriefingContent {
-        switch item {
-        case .sort(_, let itemIDs):
-            return BriefingContent(
-                symbol: "arrow.triangle.2.circlepath",
-                title: Formatting.count(itemIDs.count, "vêtement devenu petit", "vêtements devenus petits"),
-                message: "Une minute pour leur trouver une suite : frère ou sœur, cartons, don ou vente.",
-                action: "Trier"
-            )
-        case .retrieve(let need):
-            let size = SizeChart.shortLabel(size: need.size, kind: need.group.sizeKind)
-            return BriefingContent(
-                symbol: "shippingbox.fill", title: "Déjà dans vos cartons",
-                message: "\(need.group.displayName) : \(Formatting.count(need.familyStock.count, "pièce", "pièces")) en \(size) pour \(need.season.displayName). Inutile d'acheter.",
-                action: "Récupérer"
-            )
-        case .measure:
-            return BriefingContent(
-                symbol: "ruler.fill", title: "Mesurer \(child.name)",
-                message: "Trente secondes pour des prévisions de taille plus justes.", action: "Mesurer"
-            )
-        }
-    }
-
-    private func perform(_ item: BriefingItem, child: Child, family: FamilySnapshot) {
-        switch item {
-        case .sort(_, let itemIDs):
-            sortBatch = SortBatch(garments: itemIDs.compactMap(family.garment))
-        case .retrieve(let need):
-            for id in need.familyStock {
-                family.garment(id)?.move(to: .active, owner: child)
-            }
-        case .measure:
-            measuring = child
-        }
-    }
-
-    // MARK: Outlook
-
-    private func outlook(for child: Child, color: Color) -> some View {
-        let now = Date.now
-        let profile = child.profile
-        let clothing = profile.currentSize(.clothing, on: now)
-        let shoes = profile.currentSize(.shoes, on: now)
-        return VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 12) {
-                SizeBadge(value: SizeChart.shortLabel(size: clothing, kind: .clothing), caption: "\(clothing) cm", color: color)
-                SizeBadge(value: "\(shoes)", caption: "pointure", color: color)
-            }
-            VStack(alignment: .leading, spacing: 6) {
-                if let next = profile.nextSize(.clothing, after: now) {
-                    Label("Passe en \(SizeChart.shortLabel(size: next.size, kind: .clothing)) \(Formatting.window(next.when))", systemImage: "arrow.up.right")
-                }
-                if let next = profile.nextSize(.shoes, after: now) {
-                    Label("Pointure \(next.size) \(Formatting.window(next.when))", systemImage: "shoeprints.fill")
-                }
-            }
-            .font(.subheadline)
-            .foregroundStyle(Theme.ink)
-
-            GrowthChart(profile: profile, color: color)
-
-            Text(precisionNote(for: profile))
-                .font(.footnote)
-                .foregroundStyle(Theme.secondaryText)
-
-            Button("Nouvelle mesure", systemImage: "ruler") { measuring = child }
-                .buttonStyle(SecondaryButtonStyle())
-        }
-        .minoCard()
-    }
-
-    private func precisionNote(for profile: ChildProfile) -> String {
-        guard let measured = profile.lastMeasuredHeightDate else {
-            return "Estimation d'après la taille de ses vêtements et les courbes de l'OMS. Une mesure rendra les prévisions plus justes."
-        }
-        return "D'après la mesure du \(Formatting.shortDate(measured)) et les courbes de l'OMS. La zone colorée montre l'incertitude."
-    }
-
-    // MARK: Upcoming needs
-
-    @ViewBuilder
-    private func upcoming(for child: Child, family: FamilySnapshot, needs: [Need]) -> some View {
-        let ownCount = family.items.filter { $0.ownerID == child.id && $0.state == .active }.count
-        sectionTitle("À venir")
-        if ownCount < NeedsForecaster.minimumItemsForAdvice {
-            EmptyStateView(
-                symbol: "camera.fill",
-                title: "Encore quelques photos",
-                message: "Dès \(NeedsForecaster.minimumItemsForAdvice) vêtements, Mino anticipe ce dont \(child.name) aura besoin."
-            ) {
-                Button("Ajouter des vêtements", systemImage: "plus") { adding = child }
-                    .buttonStyle(PrimaryButtonStyle())
-            }
-        } else if needs.isEmpty {
-            EmptyStateView(
-                symbol: "leaf.fill",
-                title: "Rien ne manque",
-                message: "Le dressing de \(child.name) est prêt pour les semaines à venir."
-            )
-        } else {
-            ForEach(needs) { need in
-                NeedRow(need: need, family: family)
-            }
-        }
-    }
-
-    private func sectionTitle(_ title: String) -> some View {
-        Text(title)
-            .font(.system(.title3, design: .rounded).weight(.bold))
-            .foregroundStyle(Theme.ink)
-            .padding(.top, 4)
-    }
 }
 
-private struct SizeBadge: View {
-    let value: String
-    let caption: String
+private struct HandMeDownRequest: Identifiable {
+    let id = UUID()
+    let child: Child
+    let date: Date
+}
+
+// MARK: - Passage
+
+/// The next passage. Calm while it is far away; three gestures when it comes near.
+private struct PassageCard: View {
+    let child: Child
     let color: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value)
-                .font(.system(.title2, design: .rounded).weight(.bold))
-                .foregroundStyle(color)
-            Text(caption)
-                .font(.caption)
-                .foregroundStyle(Theme.secondaryText)
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(color.opacity(0.13), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-    }
-}
-
-private struct NeedRow: View {
-    let need: Need
+    let plan: PassagePlan
     let family: FamilySnapshot
+    let onSort: ([Garment]) -> Void
+    let onTakeFromFamily: () -> Void
+    let onCovered: (Need) -> Void
+    let onAddGarments: () -> Void
+
+    private var passage: Passage { plan.passage }
 
     var body: some View {
-        let size = SizeChart.shortLabel(size: need.size, kind: need.group.sizeKind)
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(need.group.displayName)
-                    .font(.system(.headline, design: .rounded))
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Prochain passage")
+                    .font(.system(.caption, design: .rounded).weight(.bold))
+                    .textCase(.uppercase)
+                    .foregroundStyle(color)
+                Text(title)
+                    .font(.system(.title2, design: .rounded).weight(.bold))
                     .foregroundStyle(Theme.ink)
-                Spacer()
-                Text("pour \(need.season.displayName)")
-                    .font(.caption)
+                Text(window)
+                    .font(.subheadline)
                     .foregroundStyle(Theme.secondaryText)
             }
-            Text("\(need.missing) à prévoir en \(size), d'ici le \(Formatting.shortDate(need.neededBy))")
-                .font(.subheadline)
-                .foregroundStyle(Theme.secondaryText)
-            if !need.familyStock.isEmpty {
-                Label("Dans vos cartons", systemImage: "shippingbox.fill")
-                    .font(.footnote.weight(.semibold))
+
+            if !passage.isUnderway(on: .now) {
+                Label("Rien à faire d'ici là. Quelques semaines avant, Mino vous aidera à le préparer.", systemImage: "leaf")
+                    .font(.subheadline)
                     .foregroundStyle(Theme.ink)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(need.familyStock, id: \.self) { id in
-                            GarmentImage(photo: family.garment(id)?.photo)
-                                .frame(width: 64, height: 64)
-                        }
-                    }
-                    .padding(.vertical, 4)
+            } else if !plan.knowsWardrobe {
+                Text("Ajoutez quelques vêtements de \(child.name) : Mino pourra préparer ce passage avec vous.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText)
+                Button("Ajouter ses vêtements", systemImage: "camera.fill", action: onAddGarments)
+                    .buttonStyle(PrimaryButtonStyle(color: color))
+            } else {
+                if plan.isReady {
+                    Label(readyMessage, systemImage: "sparkles")
+                        .font(.system(.headline, design: .rounded))
+                        .foregroundStyle(color)
+                }
+                steps
+            }
+        }
+        .padding(18)
+        .background(color.opacity(0.13), in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+    }
+
+    private var title: String {
+        switch passage.kind {
+        case .size(let size): return "\(child.name) passe en \(SizeChart.shortLabel(size: size, kind: .clothing))"
+        case .season(.summer): return "Place à l'été"
+        case .season: return "Place aux vêtements chauds"
+        }
+    }
+
+    private var window: String {
+        switch passage.kind {
+        case .size: return Formatting.sentence(Formatting.window(passage.when))
+        case .season: return "À partir du \(Formatting.shortDate(passage.date))"
+        }
+    }
+
+    private var readyMessage: String {
+        switch passage.kind {
+        case .size(let size): return "Tout est prêt pour le passage en \(SizeChart.shortLabel(size: size, kind: .clothing))."
+        case .season: return "Tout est prêt pour \(passage.season.displayName) de \(child.name)."
+        }
+    }
+
+    // MARK: Steps
+
+    private var steps: some View {
+        let outgrown = plan.outgrown.compactMap(family.garment)
+        let toFind = plan.toFind
+        return VStack(alignment: .leading, spacing: 14) {
+            StepRow(
+                number: 1, color: color, title: "Trier ce qui devient petit",
+                detail: outgrown.isEmpty ? "Rien à trier." : Formatting.count(outgrown.count, "vêtement deviendra petit", "vêtements deviendront petits"),
+                isDone: outgrown.isEmpty
+            ) {
+                if !outgrown.isEmpty {
+                    Button("Trier") { onSort(outgrown) }
+                        .buttonStyle(SecondaryButtonStyle())
                 }
             }
-            if need.stillMissing > 0 {
-                Label("Reste à trouver : \(need.stillMissing)", systemImage: "magnifyingglass")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Theme.accent)
+            StepRow(
+                number: 2, color: color, title: "Reprendre de la famille",
+                detail: plan.fromFamily.isEmpty
+                    ? "Rien dans les cartons à sa taille pour l'instant."
+                    : "\(Formatting.count(plan.fromFamily.count, "vêtement lui ira", "vêtements lui iront")) : inutile d'acheter.",
+                isDone: plan.fromFamily.isEmpty
+            ) {
+                if !plan.fromFamily.isEmpty {
+                    Button("Voir", action: onTakeFromFamily)
+                        .buttonStyle(SecondaryButtonStyle())
+                }
+            }
+            StepRow(
+                number: 3, color: color, title: "Compléter",
+                detail: toFind.isEmpty ? "Rien à trouver." : "Peut-être à prévoir, si vous ne l'avez pas déjà :",
+                isDone: toFind.isEmpty
+            ) {
+                if !toFind.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(toFind) { need in
+                            HStack {
+                                Text("\(need.group.displayName) · \(need.stillMissing) en \(SizeChart.shortLabel(size: need.size, kind: need.group.sizeKind))")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Theme.ink)
+                                Spacer()
+                                Button("J'en ai assez") { onCovered(need) }
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(Theme.accent)
+                            }
+                        }
+                        ShareLink(item: ShoppingList.text(for: child.name, needs: toFind)) {
+                            Label("Partager ma liste", systemImage: "square.and.arrow.up")
+                        }
+                        .buttonStyle(SecondaryButtonStyle())
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct StepRow<Action: View>: View {
+    let number: Int
+    let color: Color
+    let title: String
+    let detail: String
+    let isDone: Bool
+    @ViewBuilder var action: Action
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle().fill(isDone ? color : Theme.card)
+                if isDone {
+                    Image(systemName: "checkmark").font(.caption.weight(.bold)).foregroundStyle(.white)
+                } else {
+                    Text("\(number)").font(.system(.subheadline, design: .rounded).weight(.bold)).foregroundStyle(color)
+                }
+            }
+            .frame(width: 28, height: 28)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(.system(.headline, design: .rounded))
+                    .foregroundStyle(Theme.ink)
+                Text(detail)
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                action
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Étape \(number), \(title), \(isDone ? "faite" : detail)")
+    }
+}
+
+// MARK: - Toise
+
+/// The pencil marks on the door frame: past measurements, today, and the next size ahead.
+private struct ToiseCard: View {
+    let child: Child
+    let color: Color
+    let onMeasure: () -> Void
+
+    var body: some View {
+        let profile = child.profile
+        VStack(alignment: .leading, spacing: 14) {
+            Text("La toise de \(child.name)")
+                .font(.system(.title3, design: .rounded).weight(.bold))
+                .foregroundStyle(Theme.ink)
+            ToiseView(profile: profile, color: color)
+            if let next = profile.nextSize(.shoes, after: .now) {
+                Label("Pointure \(next.size) \(Formatting.window(next.when))", systemImage: "shoeprints.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.ink)
+            }
+            HStack {
+                Text(profile.lastMeasuredHeightDate.map { "Dernière mesure le \(Formatting.shortDate($0))." }
+                     ?? "Estimée d'après ses vêtements.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryText)
+                Spacer()
+                Button("Mesurer", systemImage: "ruler", action: onMeasure)
+                    .buttonStyle(SecondaryButtonStyle())
             }
         }
         .minoCard()
     }
 }
 
-private struct GrowthChart: View {
+private struct ToiseView: View {
     let profile: ChildProfile
     let color: Color
 
-    private struct Point: Identifiable {
-        let date: Date
-        let estimate: Estimate
-        var id: Date { date }
+    private struct Mark: Identifiable {
+        enum Kind { case past, today, ahead }
+        let id = UUID()
+        let height: Double
+        let label: String
+        let kind: Kind
+    }
+
+    private var marks: [Mark] {
+        let now = Date.now
+        let today = profile.height(at: now).expected
+        var marks = profile.records
+            .filter { $0.heightCM != nil && !$0.isApproximate }
+            .suffix(3)
+            .compactMap { record -> Mark? in
+                guard let height = record.heightCM, abs(height - today) >= 1.5 else { return nil }
+                return Mark(height: height, label: "\(Int(height.rounded())) cm · \(Formatting.shortDate(record.date))", kind: .past)
+            }
+        marks.append(Mark(height: today, label: "Aujourd'hui · environ \(Int(today.rounded())) cm", kind: .today))
+        if let next = profile.nextSize(.clothing, after: now) {
+            let threshold = Double(profile.currentSize(.clothing, on: now)) + 2
+            marks.append(Mark(
+                height: threshold,
+                label: "\(SizeChart.shortLabel(size: next.size, kind: .clothing)) · vers \(Formatting.period(next.when.expected))",
+                kind: .ahead
+            ))
+        }
+        return marks
     }
 
     var body: some View {
-        let now = Date.now
-        let calendar = Calendar.current
-        let points = (-6...12).compactMap { offset -> Point? in
-            guard let date = calendar.date(byAdding: .month, value: offset, to: now), date >= profile.estimatedBirth else { return nil }
-            return Point(date: date, estimate: profile.height(at: date))
-        }
-        let measured = profile.records.filter { $0.heightCM != nil && !$0.isApproximate }
-
-        Chart {
-            ForEach(points) { point in
-                AreaMark(
-                    x: .value("Date", point.date),
-                    yStart: .value("Bas", point.estimate.low),
-                    yEnd: .value("Haut", point.estimate.high)
-                )
-                .foregroundStyle(color.opacity(0.18))
-                LineMark(x: .value("Date", point.date), y: .value("Taille", point.estimate.expected))
-                    .foregroundStyle(color)
-                    .lineStyle(StrokeStyle(lineWidth: 2.5, dash: [6, 4]))
+        let marks = self.marks
+        let heights = marks.map(\.height)
+        let low = (heights.min() ?? 0) - 3
+        let high = max((heights.max() ?? 0) + 3, low + 14)
+        GeometryReader { geometry in
+            let y = { (height: Double) in geometry.size.height * (1 - (height - low) / (high - low)) }
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(color.opacity(0.22))
+                    .frame(width: 14)
+                ForEach(marks) { mark in
+                    HStack(spacing: 8) {
+                        if mark.kind == .ahead {
+                            Rectangle()
+                                .stroke(color, style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
+                                .frame(width: 34, height: 1)
+                        } else {
+                            Capsule()
+                                .fill(mark.kind == .today ? color : Theme.ink.opacity(0.5))
+                                .frame(width: 34, height: mark.kind == .today ? 4 : 2)
+                        }
+                        Text(mark.label)
+                            .font(.system(.footnote, design: .rounded).weight(mark.kind == .today ? .bold : .regular))
+                            .foregroundStyle(mark.kind == .ahead ? color : Theme.ink)
+                    }
+                    .offset(y: y(mark.height) - 9)
+                }
             }
-            ForEach(measured, id: \.date) { record in
-                PointMark(x: .value("Date", record.date), y: .value("Taille", record.heightCM ?? 0))
-                    .foregroundStyle(Theme.ink)
-            }
-            RuleMark(x: .value("Aujourd'hui", now))
-                .foregroundStyle(Theme.secondaryText.opacity(0.4))
         }
-        .chartYScale(domain: .automatic(includesZero: false))
-        .chartYAxisLabel("cm")
-        .frame(height: 180)
-        .accessibilityLabel("Projection de taille sur douze mois")
+        .frame(height: 190)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(marks.map(\.label).joined(separator: ", "))
     }
 }

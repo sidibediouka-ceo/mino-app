@@ -6,7 +6,7 @@
 |---|---|
 | **Vie privée par construction** | Minimisation : un prénom ou surnom, un âge et des tailles, rien de plus. Aucun serveur, aucun compte, aucun SDK tiers. Toute l'analyse d'image se fait sur l'appareil (Apple Vision). La localisation est approximative, ponctuelle et jamais stockée. |
 | **L'intelligence est testable** | Toute la logique métier vit dans `MinoKit` (Swift pur, Foundation seulement). L'app l'intègre comme framework du projet Xcode, sans résolution de package ; le même code est un package Swift testé hors de l'app, même sous Linux. |
-| **Natif et sobre** | SwiftUI, SwiftData, Observation, Swift Charts, WeatherKit et Vision, sur iOS 17 minimum. Zéro dépendance externe. |
+| **Natif et sobre** | SwiftUI, SwiftData, Observation, WeatherKit et Vision, sur iOS 17 minimum. Zéro dépendance externe. |
 | **Aucun code mort** | Chaque type et chaque fonction est utilisé. Pas d'abstraction « au cas où » : un protocole n'apparaît que lorsqu'il a deux implémentations. |
 | **Les données survivent à chaque mise à jour** | Une mise à jour de l'app ne touche jamais aux données. Tout changement de modèle reste additif (nouvelle propriété avec une valeur par défaut), et SwiftData migre alors la base sur place. Une transformation plus profonde passera par un `VersionedSchema` et un plan de migration, jamais par une réinstallation. Si la base ne peut pas être ouverte, Mino l'indique au lieu de repartir de zéro. |
 | **Prêt pour la synchronisation** | Les modèles SwiftData respectent les contraintes de CloudKit (valeurs par défaut, relations optionnelles, pas d'unicité). Activer la synchro iCloud en v1.1 ne demandera donc pas de migration. |
@@ -17,7 +17,7 @@
 ┌──────────────────────────── App Mino (SwiftUI) ────────────────────────────┐
 │ Features/                                                                  │
 │   Onboarding   Today (Le soir, c'est prêt · Mode enfant)   Wardrobe        │
-│   Growth (La taille d'après · besoins)   Sort (Trier & transmettre)        │
+│   Growth (Les passages · toise)          Sort (Trier & transmettre)        │
 │   Settings                                                                 │
 │        │ lit et écrit                          │ demande                   │
 │ Persistence/ (SwiftData)                 Services/                         │
@@ -34,7 +34,7 @@
 │ Weather     ressenti de la journée d'un enfant, estimation de saison       │
 │ Outfit      moteur de tenue, routine apprise, apprentissage des préférences│
 │ Anticipation besoins saisonniers, cartons familiaux, conseil de seconde vie│
-│ Briefing    ce qui mérite un geste : trier, récupérer, mesurer             │
+│ Passage     prochain passage (taille ou saison) et son plan en 3 gestes    │
 │ Listing     annonce de revente factuelle                                   │
 │ Recognition labels Vision → catégorie, pixels → couleur nommée             │
 └────────────────────────────────────────────────────────────────────────────┘
@@ -69,7 +69,7 @@ La frontière est nette : l'app traduit ses objets SwiftData en **valeurs immuab
 
 ### Anticipation (`NeedsForecaster`)
 - Une garde-robe type par saison, pensée pour une semaine d'école avec une lessive.
-- L'évaluation se fait **à la date utile** : dans 6 semaines pour la saison en cours, et au début de la saison suivante si elle commence dans moins de 8 semaines.
+- L'évaluation se fait **à la date du prochain passage** (`Passage.next`) : la taille suivante ou le changement de saison, le premier des deux. `PassagePlan` en déduit les trois gestes : ce qui deviendra petit, ce que la famille a déjà (`FamilyStock`), ce qui reste à trouver. Les « J'en ai assez » du parent (`CoveredNeed`, conservés une saison) retirent une suggestion.
 - Avant de compter un manque, Mino cherche dans **les cartons** et dans **les vêtements devenus trop petits pour un aîné**, à condition qu'ils aillent au cadet à cette date.
 - En dessous de 8 vêtements, Mino ne donne aucun conseil : ce serait du bruit.
 

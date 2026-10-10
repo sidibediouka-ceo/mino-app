@@ -66,9 +66,9 @@ struct WardrobeView: View {
                 }
             }
             .sheet(item: $sortBatch) { batch in
-                SortSessionView(garments: batch.garments, children: children)
+                SortSessionView(garments: batch.garments, children: children, date: batch.date)
             }
-            .sheet(item: $handMeDownFor) { HandMeDownView(child: $0) }
+            .sheet(item: $handMeDownFor) { HandMeDownView(child: $0, date: .now) }
         }
     }
 
@@ -80,7 +80,7 @@ struct WardrobeView: View {
         let profile = child.profile
         let outgrown = garments.filter { scope.contains($0) && profile.fit(of: $0.item, on: .now) == .tooSmall }
         let visible = scope.visible(garments, profile: profile, filter: filter)
-        let fromFamily = FamilySnapshot(children: children, garments: garments).availableGarments(for: child).count
+        let fromFamily = FamilySnapshot(children: children, garments: garments).availableGarments(for: child, on: .now).count
 
         ChipPicker(options: FitFilter.allCases, selection: $filter, title: \.title)
 
@@ -112,7 +112,7 @@ struct WardrobeView: View {
                         .foregroundStyle(Theme.secondaryText)
                 }
                 Spacer()
-                Button("Trier") { sortBatch = SortBatch(garments: outgrown) }
+                Button("Trier") { sortBatch = SortBatch(garments: outgrown, date: .now) }
                     .buttonStyle(SecondaryButtonStyle())
                     .accessibilityHint("Trier les vêtements devenus petits pour \(child.name)")
             }
@@ -525,4 +525,6 @@ struct CategoryPage: Hashable {
 struct SortBatch: Identifiable {
     let id = UUID()
     let garments: [Garment]
+    /// Today, or the date of the passage being prepared.
+    let date: Date
 }

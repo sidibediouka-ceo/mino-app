@@ -6,6 +6,8 @@ import SwiftUI
 /// from an older sibling, without buying anything. Pick them, they join the child's dressing.
 struct HandMeDownView: View {
     let child: Child
+    /// Today, or the date of an upcoming passage.
+    let date: Date
 
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Child.createdAt) private var children: [Child]
@@ -13,11 +15,12 @@ struct HandMeDownView: View {
     @State private var selection: Set<UUID> = []
 
     var body: some View {
-        let available = FamilySnapshot(children: children, garments: garments).availableGarments(for: child)
+        let available = FamilySnapshot(children: children, garments: garments).availableGarments(for: child, on: date)
+        let when = Calendar.current.isDateInToday(date) ? "en ce moment" : "d'ici le \(Formatting.shortDate(date))"
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Ces vêtements de la famille vont à \(child.name) en ce moment. Touchez ceux à lui confier.")
+                    Text("Ces vêtements de la famille iront à \(child.name) \(when). Touchez ceux à lui confier.")
                         .font(.subheadline)
                         .foregroundStyle(Theme.secondaryText)
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 14) {

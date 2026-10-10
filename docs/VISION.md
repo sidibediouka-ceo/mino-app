@@ -55,7 +55,7 @@ Un enfant change de taille **tous les 6 à 12 mois** avant 6 ans. Sa garde-robe 
 Ses principes de conception :
 1. **L'intelligence se ressent, elle ne s'affiche pas.** On ne parle jamais d'« IA ». On voit seulement une tenue juste et une phrase d'explication (« 8° ce matin et pluie : imperméable et bottes »).
 2. **Toute recommandation mène à un geste** : *Habiller*, *Récupérer*, *Transmettre*, *Mesurer*, *Trier*.
-3. **Moins d'actions, mais de meilleures.** L'accueil ne montre que les tenues. Les suggestions (trier, récupérer, mesurer) vivent dans *Grandir*, signalées par un simple badge.
+3. **Moins d'actions, mais de meilleures.** L'accueil ne montre que les tenues. *Grandir* ne s'anime qu'à l'approche d'un passage, signalé par un simple badge.
 4. **L'incertitude est dite honnêtement.** « Vers mi-février (entre janvier et mars) » plutôt qu'une date fausse.
 5. **Les cartons de la famille passent avant l'achat.**
 
@@ -78,11 +78,13 @@ Le produit repose sur une entrée et trois boucles. Chaque boucle a un budget d'
 - **Mode enfant** au matin : les pièces en grand, dans l'ordre d'habillage, que l'enfant coche lui-même. Ce mode est inspiré des crèches japonaises. Il transforme une corvée en autonomie, et c'est un moment que les enfants réclament.
 - **Budget : 1 geste par jour.**
 
-### Boucle 2 : « La taille d'après » (saisonnière)
-- Projection de croissance à partir des courbes OMS, recalée sur les mesures de l'enfant, **avec un intervalle d'incertitude** : « Passe en 110 vers mi-février (entre janv. et mars). »
-- **Besoins anticipés** : pour la saison en cours et la suivante, Mino compare une garde-robe type (une semaine d'école, une lessive par semaine) à ce qui ira à l'enfant **à la date utile**, pas seulement aujourd'hui.
-- **Avant d'acheter, regarder dans les cartons** : si un vêtement stocké ou devenu trop petit pour l'aîné ira bientôt au cadet, Mino propose de le **récupérer** en un geste.
-- **Budget : moins de 2 minutes par saison.**
+### Boucle 2 : « Les passages » (quelques fois par an)
+Deux moments refont la garde-robe d'un enfant : **le passage à la taille suivante** et **le grand changement de saison**. Pour la saison, on s'inspire du 衣替え (*koromogae*) japonais : les vêtements légers sortent le 1er juin, les vêtements chauds le 1er septembre. L'onglet *Grandir* prend en charge ces moments, comme l'abonnement danois Vigga envoie la taille suivante, mais sans abonnement ni boutique.
+- **Entre deux passages**, l'onglet reste calme : « Prochain passage : Léo passe en 5 ans, vers mi-janvier. Rien à faire d'ici là. »
+- **Quatre semaines avant**, trois gestes : **trier** ce qui deviendra petit (en un lot à vendre si besoin), **reprendre de la famille** ce qui ira (cartons, aînés), puis **compléter**. Ce qui manque est formulé comme une suggestion (« Peut-être un manteau en 5 ans »), avec « J'en ai assez » pour que Mino arrête de le proposer, et une **liste partageable** (grands-parents, friperie).
+- Quand tout est en place : « Tout est prêt pour l'hiver de Léo. »
+- **La toise** remplace la courbe : les traits des mesures passées, l'enfant aujourd'hui, la taille suivante en pointillés. C'est un souvenir de famille, pas un percentile (les courbes sont partout et elles inquiètent).
+- **Budget : dix minutes par passage.**
 
 ### Boucle 3 : « Trier et transmettre » (cycle de vie)
 - Mino détecte les vêtements probablement trop petits et propose une **session de tri** à cartes qu'on balaie, d'une minute.

@@ -6,10 +6,13 @@ import SwiftUI
 struct SortSessionView: View {
     let garments: [Garment]
     let children: [Child]
+    /// Today, or the date of the passage being prepared.
+    let date: Date
 
     @Environment(\.dismiss) private var dismiss
     @State private var index = 0
     @State private var decisions: [String] = []
+    @State private var listedForSale: [Garment] = []
     @State private var dragOffset: CGSize = .zero
 
     var body: some View {
@@ -38,7 +41,7 @@ struct SortSessionView: View {
 
     private func card(for garment: Garment) -> some View {
         let family = children.map(\.profile)
-        let recommendation = LifecycleAdvisor.recommend(for: garment.item, family: family, on: .now)
+        let recommendation = LifecycleAdvisor.recommend(for: garment.item, family: family, on: date)
         return VStack(spacing: 20) {
             VStack(spacing: 12) {
                 GarmentImage(photo: garment.photo)
@@ -101,11 +104,14 @@ struct SortSessionView: View {
     }
 
     private func measurementHint(for child: Child, kind: SizeKind) -> String {
-        let value = child.profile.measurement(for: kind, at: .now).expected
+        let value = child.profile.measurement(for: kind, at: date).expected
+        let when = Calendar.current.isDateInToday(date) ? "" : "D'ici le \(Formatting.shortDate(date)), "
+        let hint: String
         switch kind {
-        case .clothing: return "\(child.name) mesure environ \(Int(value.rounded())) cm"
-        case .shoes: return "\(child.name) chausse environ du \(SizeChart.wornShoeSize(forEstimate: value))"
+        case .clothing: hint = "\(child.name) mesurera environ \(Int(value.rounded())) cm"
+        case .shoes: hint = "\(child.name) chaussera environ du \(SizeChart.wornShoeSize(forEstimate: value))"
         }
+        return when.isEmpty ? Formatting.sentence(hint) : when + hint
     }
 
     // MARK: Summary
@@ -126,8 +132,15 @@ struct SortSessionView: View {
                         .foregroundStyle(Theme.secondaryText)
                 }
             }
-            if decisions.contains(DestinationLabel.text(.sell, children: children)) {
-                Text("Les annonces sont prêtes dans Dressing › À vendre.")
+            if listedForSale.count > 1 {
+                let lot = ListingWriter.lot(of: listedForSale.map(\.item))
+                ShareLink(item: lot.text, subject: Text(lot.title)) {
+                    Label("Partager en un seul lot", systemImage: "square.and.arrow.up")
+                }
+                .buttonStyle(SecondaryButtonStyle())
+            }
+            if !listedForSale.isEmpty {
+                Text("Les annonces sont prêtes dans Dressing › Famille › À vendre.")
                     .font(.footnote)
                     .foregroundStyle(Theme.secondaryText)
             }
@@ -141,13 +154,14 @@ struct SortSessionView: View {
 
     private func keep(_ garment: Garment) {
         if let owner = garment.owner {
-            garment.fitConfirmedAt = owner.profile.measurement(for: garment.category.sizeKind, at: .now).expected
+            garment.fitConfirmedAt = owner.profile.measurement(for: garment.category.sizeKind, at: date).expected
         }
         advance(with: "Ça va encore")
     }
 
     private func decide(_ garment: Garment, _ destination: Destination) {
         garment.apply(destination, children: children)
+        if destination == .sell { listedForSale.append(garment) }
         let label: String
         if case .sibling(let id, _) = destination {
             label = DestinationLabel.text(.sibling(id, fitsFrom: nil), children: children)

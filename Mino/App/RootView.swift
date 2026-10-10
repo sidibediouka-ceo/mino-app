@@ -8,12 +8,15 @@ struct RootView: View {
     @AppStorage("onboardingCompleted") private var onboardingCompleted = false
     @Environment(AppRouter.self) private var router
 
-    /// Things worth a gesture (sorting, boxes, measuring): a quiet badge, never on the home screen.
-    private var toDoCount: Int {
+    @Query private var covered: [CoveredNeed]
+
+    /// Children whose next passage is near and not ready yet: a quiet badge, never on the home screen.
+    private var passagesToPrepare: Int {
         let family = FamilySnapshot(children: children, garments: garments)
-        return Briefing.compose(
-            family: family.profiles, items: family.items, needs: family.needs(on: .now, calendar: .current), on: .now
-        ).count
+        return children.filter { child in
+            guard let plan = family.passagePlan(for: child, covered: covered, calendar: .current) else { return false }
+            return plan.passage.isUnderway(on: .now) && plan.knowsWardrobe && !plan.isReady
+        }.count
     }
 
     var body: some View {
@@ -29,7 +32,7 @@ struct RootView: View {
                         .tag(AppTab.wardrobe)
                     GrowthView()
                         .tabItem { Label("Grandir", systemImage: "chart.line.uptrend.xyaxis") }
-                        .badge(toDoCount)
+                        .badge(passagesToPrepare)
                         .tag(AppTab.growth)
                 }
             } else {
