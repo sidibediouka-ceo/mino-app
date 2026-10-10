@@ -58,7 +58,7 @@ enum DemoScenario: CaseIterable, Identifiable {
         case .passage: return "2. Passage au 10 ans dans 3 semaines"
         case .sibling: return "3. Petit frère Léon, 4 ans, et cartons"
         case .event: return "4. Tenue préparée pour un anniversaire"
-        case .journal: return "5. Carnet des tenues, avec photo"
+        case .journal: return "5. Carnet des tenues du mois"
         case .resale: return "6. Vêtements en vente"
         case .photos: return "7. Photos de vêtements dans Photos"
         }
@@ -70,7 +70,7 @@ enum DemoScenario: CaseIterable, Identifiable {
         case .passage: return "Une mesure à 135,7 cm et trois affaires devenues petites. Écran Grandir."
         case .sibling: return "26 vêtements à lui et 4 qui l'attendent dans les cartons. Demain, Mode enfant, Famille."
         case .event: return "Dans 3 jours. Carnet des tenues (calendrier en haut à gauche d'Aujourd'hui)."
-        case .journal: return "Les 6 derniers jours, dont une photo de tenue."
+        case .journal: return "Une tenue par jour depuis le 1er du mois, pour Jeanne et Léon."
         case .resale: return "Deux paires de baskets devenues petites, en vente. Dressing › Famille › En vente."
         case .photos: return "Enregistre les photos de vêtements fournies, pour tester l'ajout par lot."
         }
@@ -255,33 +255,58 @@ private struct DemoLibrary {
         return "Prêt : \(Formatting.longDate(date)), dans le carnet."
     }
 
+    /// Every day of the month so far, for each child: the calendar fills with their colours.
     private func journal() -> String {
         let jeanne = preparedJeanne()
-        let outfits: [[(OutfitSlot, GarmentCategory, GarmentColor)]] = [
-            [(.top, .longSleeve, .navy), (.bottom, .pants, .denim), (.layer, .cardigan, .white), (.shoes, .sneakers, .white)],
-            [(.top, .tshirt, .white), (.bottom, .shorts, .pink), (.legwear, .tights, .grey),
-             (.outerwear, .lightJacket, .multicolor), (.shoes, .sneakers, .white)],
-            [(.top, .tshirt, .white), (.bottom, .pants, .pink), (.layer, .sweater, .purple), (.shoes, .sneakers, .purple)],
-            [(.onePiece, .dress, .pink), (.legwear, .tights, .white), (.outerwear, .lightJacket, .denim), (.shoes, .sneakers, .brown)],
-            [(.top, .longSleeve, .navy), (.bottom, .shorts, .pink), (.legwear, .tights, .navy), (.layer, .sweater, .purple), (.shoes, .sneakers, .purple)],
-            [(.top, .tshirt, .white), (.bottom, .pants, .denim), (.outerwear, .lightJacket, .denim), (.shoes, .sneakers, .brown)]
-        ]
+        _ = sibling()
+        let children = [jeanne] + [child(named: "Léon")].compactMap { $0 }
+        let today = calendar.startOfDay(for: .now)
+        let monthStart = calendar.dateInterval(of: .month, for: today)?.start ?? today
+        let days = calendar.dateComponents([.day], from: monthStart, to: today).day ?? 0
         let photo = resource("DemoOutfitPhoto", "jpg")
         var saved = 0
-        for (offset, outfit) in outfits.enumerated() {
-            let date = calendar.startOfDay(for: .now.addingTimeInterval(-Double(offset + 1) * day))
-            let chosen = pieces(of: jeanne, outfit)
-            guard isComplete(chosen) else { continue }
-            let plan = replacePlan(for: jeanne, on: date)
-            plan.context = calendar.isDateInWeekend(date) ? .outing : .school
-            plan.piecesRaw = chosen.map(\.rawValue)
-            plan.proposedRaw = plan.piecesRaw
-            plan.confirmedAt = date.addingTimeInterval(8 * 3600)
-            // The second outfit is the one in the photo, once it is provided.
-            if offset == 1 { plan.photo = photo }
-            saved += 1
+        for child in children {
+            for index in 0..<days {
+                guard let date = calendar.date(byAdding: .day, value: index, to: monthStart) else { continue }
+                let chosen = outfit(for: child, on: date, index: index)
+                guard isComplete(chosen) else { continue }
+                let plan = replacePlan(for: child, on: date)
+                plan.context = calendar.isDateInWeekend(date) ? .outing : .school
+                plan.piecesRaw = chosen.map(\.rawValue)
+                plan.proposedRaw = plan.piecesRaw
+                plan.confirmedAt = date.addingTimeInterval(8 * 3600)
+                // Two days ago, Jeanne's outfit has its photo, once one is provided.
+                if child === jeanne && index == days - 2 { plan.photo = photo }
+                saved += 1
+            }
         }
-        return saved == 0 ? "En attente des photos de vêtements." : "Prêt : \(Formatting.count(saved, "tenue", "tenues")) dans le carnet."
+        return saved == 0 ? "En attente des photos de vêtements." : "Prêt : \(Formatting.count(saved, "tenue", "tenues")) depuis le 1er du mois."
+    }
+
+    /// A plausible outfit that changes every day: the child's garments taken in turn, a dress
+    /// every fourth day when there is one, tights under a dress or a skirt.
+    private func outfit(for child: Child, on date: Date, index: Int) -> [OutfitPiece] {
+        let profile = child.profile
+        let wearable = (child.garments ?? [])
+            .filter { $0.state == .active && profile.fit(of: $0.item, on: date).isWearable }
+            .sorted { $0.id.uuidString < $1.id.uuidString }
+        func pick(_ slot: OutfitSlot, _ offset: Int) -> Garment? {
+            let options = wearable.filter { $0.category.slot == slot }
+            return options.isEmpty ? nil : options[(index + offset) % options.count]
+        }
+        var chosen: [(OutfitSlot, Garment)] = []
+        if index % 4 == 3, let dress = pick(.onePiece, 0) {
+            chosen.append((.onePiece, dress))
+        } else if let top = pick(.top, 0), let bottom = pick(.bottom, index / 3) {
+            chosen += [(.top, top), (.bottom, bottom)]
+        }
+        if chosen.contains(where: { $0.1.category == .dress || $0.1.category == .shorts }), let tights = pick(.legwear, index) {
+            chosen.append((.legwear, tights))
+        }
+        if index % 2 == 0, let layer = pick(.layer, index / 2) { chosen.append((.layer, layer)) }
+        if index % 3 == 0, let outerwear = pick(.outerwear, index / 3) { chosen.append((.outerwear, outerwear)) }
+        if let shoes = pick(.shoes, index) { chosen.append((.shoes, shoes)) }
+        return chosen.map { OutfitPiece(slot: $0.0, itemID: $0.1.id) }
     }
 
     private func resale() -> String {
