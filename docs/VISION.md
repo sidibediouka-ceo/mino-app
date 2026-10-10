@@ -65,7 +65,7 @@ Le produit repose sur une entrée et trois boucles. Chaque boucle a un budget d'
 
 ### Entrée : premier usage en moins de 90 secondes
 1. Un écran d'accueil, une promesse.
-2. L'enfant : prénom ou surnom, **âge**, **taille habituelle** (« il porte du 4 ans ») et pointure. Ni date de naissance ni sexe : c'est inutile pour Mino, et moins on collecte de données sur un enfant, mieux c'est (minimisation des données, RGPD art. 5, App Store Review Guidelines 5.1.1). On ne demande pas sa stature : les parents connaissent la taille de l'étiquette, pas la mesure en cm.
+2. L'enfant : prénom ou surnom (facultatif), **âge**, **taille habituelle** (« il porte du 4 ans ») et pointure. Ni date de naissance ni sexe : c'est inutile pour Mino, et moins on collecte de données sur un enfant, mieux c'est (minimisation des données, RGPD art. 5, App Store Review Guidelines 5.1.1). On ne demande pas sa stature : les parents connaissent la taille de l'étiquette, pas la mesure en cm.
 3. **10 photos en lot** depuis la photothèque ou en rafale à l'appareil. Mino détoure, propose catégorie, couleur et taille (lecture de l'étiquette) ; le parent valide d'un geste.
 4. La première tenue apparaît immédiatement, avec la météo du jour.
 
