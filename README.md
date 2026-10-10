@@ -41,6 +41,17 @@ Ce fichier n'est pas versionné et `xcodegen` le relie au projet : l'équipe n'e
 
 Pour la météo, activez la capability **WeatherKit** pour l'identifiant `com.diouka.mino` dans le portail Apple Developer, puis choisissez votre équipe dans Xcode. Sans WeatherKit, Mino fonctionne avec une estimation de saison.
 
+## Reconnaissance des vêtements
+
+`Mino/Resources/MinoGarmentClassifier.mlmodel` (8 Mo, sur l'appareil) reconnaît 11 familles de vêtements. Pour le réentraîner, avec Python, `torch`, `timm` et `coremltools` :
+
+```sh
+python3 design/classifier/train.py --dataset <clothing-dataset> --weights <mobilenetv3_large_100.pth> \
+    --photos <photos.csv> --out Mino/Resources/MinoGarmentClassifier.mlmodel
+```
+
+Données : Clothing Dataset d'Alexey Grigorev (CC0) et les photos catalogue de Mino (`chemin,famille` dans le CSV). Modèle de départ : MobileNetV3-Large (timm, Apache 2.0).
+
 ## Tests
 
 ```sh
