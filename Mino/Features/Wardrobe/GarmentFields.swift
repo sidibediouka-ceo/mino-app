@@ -152,7 +152,8 @@ struct GarmentDraft: Identifiable {
         self.size = readSize ?? Self.defaultSize(for: category.sizeKind, sizing: sizing)
         self.suggestions = Array(categories.prefix(3))
         self.sizeWasRead = readSize != nil
-        self.needsReview = categories.isEmpty
+        // Guessed from the outline alone: right most of the time, but worth a look.
+        self.needsReview = categories.isEmpty || !analysis.isRecognized
     }
 
     /// Most garments a parent photographs fit the child today.

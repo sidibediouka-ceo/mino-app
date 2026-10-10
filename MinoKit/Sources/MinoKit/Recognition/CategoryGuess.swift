@@ -9,7 +9,7 @@ public enum CategoryGuess {
         ("raincoat", .raincoat), ("poncho", .raincoat), ("rain", .raincoat),
         ("t_shirt", .tshirt), ("t-shirt", .tshirt), ("tshirt", .tshirt), ("jersey", .tshirt),
         ("turtleneck", .turtleneck), ("polo neck", .turtleneck),
-        ("cardigan", .cardigan),
+        ("cardigan", .cardigan), ("vest", .cardigan), ("waistcoat", .cardigan), ("gilet", .cardigan),
         ("tights", .tights), ("pantyhose", .tights), ("stocking", .tights),
         ("overall", .overalls), ("dungaree", .overalls),
         ("jumpsuit", .playsuit), ("romper", .playsuit), ("tracksuit", .playsuit),
@@ -29,12 +29,26 @@ public enum CategoryGuess {
     ]
 
     /// Categories suggested by the labels, most likely first. Weak signals are dropped.
-    public static func ranked(fromLabels labels: [(identifier: String, confidence: Float)]) -> [GarmentCategory] {
+    ///
+    /// With the garment's outline, categories that cannot have that shape are pushed down and
+    /// those that can are lifted, so that "jeans" on a denim jacket no longer reads as trousers
+    /// and a photo the classifier could not read still gets a sensible first guess.
+    public static func ranked(fromLabels labels: [(identifier: String, confidence: Float)], shape: GarmentShape? = nil) -> [GarmentCategory] {
         var scores: [GarmentCategory: Float] = [:]
         for label in labels where label.confidence >= 0.1 {
             let identifier = label.identifier.lowercased()
             if let match = keywords.first(where: { identifier.contains($0.0) }) {
                 scores[match.1, default: 0] += label.confidence
+            }
+        }
+        if let shape {
+            let likely = shape.likelyCategories
+            for category in GarmentCategory.allCases {
+                if let rank = likely.firstIndex(of: category) {
+                    scores[category, default: 0] += 0.35 - 0.04 * Float(rank)
+                } else if let score = scores[category] {
+                    scores[category] = score - 0.6
+                }
             }
         }
         return scores

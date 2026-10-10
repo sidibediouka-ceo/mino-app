@@ -7,8 +7,10 @@ import Vision
 struct GarmentAnalysis: Sendable {
     /// Background-free PNG when the subject could be lifted, the plain photo otherwise.
     let photo: Data
-    /// Most likely categories first; empty when Vision has no idea.
+    /// Most likely categories first; empty when neither the classifier nor the outline has an idea.
     let categories: [GarmentCategory]
+    /// The classifier itself named the garment; otherwise the categories come from its outline only.
+    let isRecognized: Bool
     let color: GarmentColor?
     /// Text read on the photo (a visible label often carries the size).
     let texts: [String]
@@ -19,13 +21,21 @@ enum GarmentAnalyzer {
         await Task.detached(priority: .userInitiated) {
             let upright = redraw(image, maxDimension: 1024)
             guard let cgImage = upright.cgImage else {
-                return GarmentAnalysis(photo: upright.pngData() ?? Data(), categories: [], color: nil, texts: [])
+                return GarmentAnalysis(photo: upright.pngData() ?? Data(), categories: [], isRecognized: false, color: nil, texts: [])
             }
             let cutout = liftSubject(from: cgImage)
             let stored = redraw(UIImage(cgImage: cutout ?? cgImage), maxDimension: 600)
+            // The garment alone on white reads better than the photo with its background.
+            let labels = classify(cutout.flatMap { onWhite($0) } ?? cgImage)
+            let shape = cutout.flatMap { outline(of: $0) }
+            #if DEBUG
+            // What Apple's classifier saw, to tune Mino's keywords from the Xcode console.
+            print("Mino recognition:", shape?.family as Any, labels.prefix(8).map { "\($0.identifier) \(Int($0.confidence * 100))%" })
+            #endif
             return GarmentAnalysis(
                 photo: stored.pngData() ?? Data(),
-                categories: classify(cgImage),
+                categories: CategoryGuess.ranked(fromLabels: labels, shape: shape),
+                isRecognized: !CategoryGuess.ranked(fromLabels: labels).isEmpty,
                 color: dominantColor(of: cutout ?? cgImage, isCutout: cutout != nil),
                 texts: recognizeText(in: cgImage)
             )
@@ -54,11 +64,10 @@ enum GarmentAnalyzer {
         return CIContext().createCGImage(ciImage, from: ciImage.extent)
     }
 
-    private static func classify(_ image: CGImage) -> [GarmentCategory] {
+    private static func classify(_ image: CGImage) -> [(identifier: String, confidence: Float)] {
         let request = VNClassifyImageRequest()
         guard (try? VNImageRequestHandler(cgImage: image).perform([request])) != nil else { return [] }
-        let labels = (request.results ?? []).prefix(20).map { (identifier: $0.identifier, confidence: $0.confidence) }
-        return CategoryGuess.ranked(fromLabels: Array(labels))
+        return Array((request.results ?? []).prefix(20).map { (identifier: $0.identifier, confidence: $0.confidence) })
     }
 
     private static func recognizeText(in image: CGImage) -> [String] {
@@ -100,6 +109,37 @@ enum GarmentAnalyzer {
             }
         }
         return GarmentColor.dominant(in: samples)
+    }
+
+    /// The cut-out on a white sheet, as a catalogue photo.
+    private static func onWhite(_ cutout: CGImage) -> CGImage? {
+        let margin = max(cutout.width, cutout.height) / 10
+        let width = cutout.width + 2 * margin, height = cutout.height + 2 * margin
+        guard let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+        ) else { return nil }
+        context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        context.draw(cutout, in: CGRect(x: margin, y: margin, width: cutout.width, height: cutout.height))
+        return context.makeImage()
+    }
+
+    /// The cut-out's opaque pixels on a 24 × 24 grid, top row first.
+    private static func outline(of cutout: CGImage) -> GarmentShape? {
+        let side = 24
+        var pixels = [UInt8](repeating: 0, count: side * side * 4)
+        let drawn = pixels.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(
+                data: buffer.baseAddress, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else { return false }
+            context.draw(cutout, in: CGRect(x: 0, y: 0, width: side, height: side))
+            return true
+        }
+        guard drawn, cutout.width > 0 else { return nil }
+        let mask = (0..<side).map { y in (0..<side).map { x in pixels[(y * side + x) * 4 + 3] >= 128 } }
+        return GarmentShape(mask: mask, aspect: Double(cutout.height) / Double(cutout.width))
     }
 
     /// Draws the image upright, at most `maxDimension` points on its longest side.
